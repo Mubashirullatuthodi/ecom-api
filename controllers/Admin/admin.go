@@ -17,7 +17,7 @@ type Admin struct {
 	Password string `json:"password"`
 }
 
-//var user models.User
+var user models.User
 
 const RoleAdmin = "admin"
 
@@ -83,8 +83,8 @@ func ListUsers(ctx *gin.Context) {
 
 	for _, value := range listuser {
 		listusers := list{
-			Id:        int(value.UserID),
-			FirstName: value.FistName,
+			Id:        int(value.ID),
+			FirstName: value.FirstName,
 			LastName:  value.LastName,
 			Email:     value.Email,
 			Gender:    value.Gender,
@@ -145,18 +145,20 @@ func UpdateUser(ctx *gin.Context) {
 }
 
 func Status(ctx *gin.Context) {
-	var check models.User
-	user := ctx.Param("ID")
-	initializers.DB.First(&check, user)
-	if check.Status == "Active" {
-		initializers.DB.Model(&check).Update("status", "Blocked")
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "user Blocked",
-		})
-	} else {
-		initializers.DB.Model(&check).Update("status", "Active")
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "User Unblocked",
-		})
-	}
+	// var check models.User
+	// user := ctx.Param("ID")
+	// initializers.DB.First(&check, user)
+	// if check.Status == "Active" {
+	// 	initializers.DB.Model(&check).Update("status", "Blocked")
+	// 	ctx.JSON(http.StatusOK, gin.H{
+	// 		"message": "user Blocked",
+	// 	})
+	// } else {
+	// 	initializers.DB.Model(&check).Update("status", "Active")
+	// 	ctx.JSON(http.StatusOK, gin.H{
+	// 		"message": "User Unblocked",
+	// 	})
+	// }
+	
+	fmt.Println("deleted",initializers.DB.Unscoped().Find(&models.User{}))
 }
