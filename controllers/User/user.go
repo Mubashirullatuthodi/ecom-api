@@ -3,6 +3,7 @@ package controllers
 import (
 	//"crypto/rand"
 
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 var user models.User
 
 var RoleUser = "User"
-
 
 func Signup(ctx *gin.Context) {
 
@@ -39,21 +39,7 @@ func Signup(ctx *gin.Context) {
 		})
 		return
 	}
-
-	res := initializers.DB.Unscoped().Where("email=?", user.Email).First(&existingUser)
-	if res.Error == nil && existingUser.DeletedAt.Valid {
-		existingUser.DeletedAt.Time = time.Time{}
-		existingUser.DeletedAt.Valid = false
-		if err := initializers.DB.Save(&existingUser).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"status": "Fail",
-				"Error":  "Failed To reactive account",
-				"code":   500,
-			})
-			return
-		}
-		
-		hashedpassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"Error": "Failed to hash",
@@ -84,10 +70,24 @@ func Signup(ctx *gin.Context) {
 
 		initializers.DB.Create(&user)
 
-		ctx.JSON(http.StatusCreated, gin.H{
+		ctx.JSON(200, gin.H{
+			"status":  "success",
 			"message": "Please check your email and enter the OTP",
 		})
-		return
+
+	res := initializers.DB.Unscoped().Where("email=?", user.Email).First(&existingUser)
+	if res.Error == nil && existingUser.DeletedAt.Valid {
+		existingUser.DeletedAt.Time = time.Time{}
+		existingUser.DeletedAt.Valid = false
+		if err := initializers.DB.Save(&existingUser).Error; err != nil {
+			ctx.JSON(500, gin.H{
+				"status": "Fail",
+				"Error":  "Failed To reactive account",
+				"code":   500,
+			})
+			return
+		}
+		fmt.Println("helloooiii")
 	}
 }
 
@@ -159,7 +159,6 @@ func ResendOtp(ctx *gin.Context) {
 
 }
 
-
 func UserLogin(ctx *gin.Context) {
 	var postinguser struct {
 		Email    string `json:"email"`
@@ -195,5 +194,3 @@ func UserLogin(ctx *gin.Context) {
 		"message": "Login Successfully",
 	})
 }
-
-

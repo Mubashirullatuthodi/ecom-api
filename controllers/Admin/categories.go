@@ -87,16 +87,20 @@ func UpdateCategory(ctx *gin.Context) {
 	var category models.Category
 
 	if err := initializers.DB.First(&category, id).Error; err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "category not found",
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"error":  "category not found",
+			"code":   500,
 		})
 		return
 	}
 
 	var UpdateCategory models.Category
 	if err := ctx.BindJSON(&UpdateCategory); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"error":  "Failed to bind json",
+			"code":   500,
 		})
 		return
 	}
@@ -105,43 +109,44 @@ func UpdateCategory(ctx *gin.Context) {
 	category.Description = UpdateCategory.Description
 
 	if err := initializers.DB.Save(&category).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to update category",
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"error":  "failed to update category",
+			"code":   500,
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
+	ctx.JSON(200, gin.H{
+		"status":  "success",
 		"message": "category updated successfully",
 	})
 }
 
 func DeleteCategory(ctx *gin.Context) {
+	var DeleteCategory models.Category
 
+	id := ctx.Param("ID")
+	err := initializers.DB.First(&DeleteCategory, id)
+	if err.Error != nil {
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"Error":  "category not found",
+			"code":   500,
+		})
+		return
+	}
+	err = initializers.DB.Delete(&DeleteCategory)
+	if err.Error != nil {
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"Error":  "Filed To Delete",
+			"code":   500,
+		})
+		return
+	}
+	ctx.JSON(200,gin.H{
+		"status":"Success",
+		"Error":"Category Deleted Successfully",
+	})
 }
-
-// func CreateProduct(ctx *gin.Context) {
-// 	var product models.Product
-
-// 	if err := ctx.BindJSON(&product); err != nil {
-// 		ctx.JSON(http.StatusBadRequest, gin.H{
-// 			"error": err.Error(),
-// 		})
-// 		return
-// 	}
-
-// 	for _, image := range product.Images {
-
-// 		imagePath := filepath.Join("images", image.Filename)
-
-// 		_, err := ioutil.ReadFile(imagePath)
-// 		if err != nil {
-// 			ctx.JSON(http.StatusInternalServerError, gin.H{
-// 				"error": err.Error(),
-// 			})
-// 			return
-// 		}
-// 		image.URL = imagePath
-// 	}
-// 	ctx.JSON(http.StatusCreated, product)
-// }

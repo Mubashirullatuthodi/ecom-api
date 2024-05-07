@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var BlacklistedTokens = make(map[string]bool)
+
 type Claims struct {
 	Email  string `json:"username"`
 	Role   string `json:"roles"`

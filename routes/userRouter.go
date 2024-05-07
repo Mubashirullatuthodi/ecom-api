@@ -5,7 +5,7 @@ import (
 	controllers "github.com/mubashir/e-commerce/controllers/User"
 )
 
-var roleUser = "User"
+//var roleUser = "User"
 
 func UserGroup(r *gin.RouterGroup) {
 	//===================== user authentication ====================

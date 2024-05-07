@@ -6,23 +6,24 @@ import (
 	"github.com/mubashir/e-commerce/middleware"
 )
 
-var roleAdmin = "Admin"
+var RoleAdmin = "Admin"
 
 func AdminGroup(r *gin.RouterGroup) {
 	// admin authentication
 	r.POST("/admin/login", controllers.AdminLogin)
+	r.POST("/admin/signup", controllers.AdminSignUp)
 
 	//user management
 	r.GET("/admin/usermanagement", controllers.ListUsers)
-	r.PATCH("/admin/block/:ID", middleware.AuthMiddleware(roleAdmin), controllers.Status)
-	r.PATCH("/admin/:ID", middleware.AuthMiddleware(roleAdmin), controllers.UpdateUser)
-	r.DELETE("/admin/delete/:ID", middleware.AuthMiddleware(roleAdmin), controllers.DeleteUser)
+	r.PATCH("/admin/block/:ID", controllers.Status)
+	r.PATCH("/admin/:ID", controllers.UpdateUser)
+	r.DELETE("/admin/delete/:ID", controllers.DeleteUser)
 
 	// product management
 
 	// category management
-	r.POST("/admin/category", middleware.AuthMiddleware(roleAdmin), controllers.CreateCategory)
-	r.GET("/admin/category", middleware.AuthMiddleware(roleAdmin), controllers.GetCategory)
-	r.PATCH("/admin/category/:ID", middleware.AuthMiddleware(roleAdmin), controllers.UpdateCategory)
-	r.DELETE("/admin/category/:ID", middleware.AuthMiddleware(roleAdmin), controllers.DeleteCategory)
+	r.POST("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.CreateCategory)
+	r.GET("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.GetCategory)
+	r.PATCH("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.UpdateCategory)
+	r.DELETE("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteCategory)
 }

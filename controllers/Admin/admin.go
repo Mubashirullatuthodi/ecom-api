@@ -4,58 +4,86 @@ import (
 	"fmt"
 	"net/http"
 
-	//"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
-	//"github.com/icza/session"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
 )
+
+var user models.User
+
+var RoleAdmin = "Admin"
+
+func AdminSignUp(ctx *gin.Context) {
+	var adminSignUp models.Admin
+	err := ctx.ShouldBindJSON(&adminSignUp)
+	if err != nil {
+		ctx.JSON(406, gin.H{
+			"status": "Fail",
+			"Error":  "Json binding error",
+			"code":   406,
+		})
+		return
+	}
+	er := initializers.DB.Create(&adminSignUp)
+	if er.Error != nil {
+		ctx.JSON(500, gin.H{
+			"status":  "Fail",
+			"message": "Failed to signUp",
+			"code":    500,
+		})
+		return
+	}
+	ctx.JSON(201, gin.H{
+		"status":  "Success",
+		"message": "Admin Added Succesfully",
+	})
+
+}
 
 type Admin struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-var user models.User
-
-const RoleAdmin = "admin"
-
 func AdminLogin(ctx *gin.Context) {
 	var admin Admin
 
-	// session := sessions.Default(ctx)
-	// check := session.Get(RoleAdmin)
-	// if check == nil {
-
-	// }
-
 	if err := ctx.BindJSON(&admin); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+		ctx.JSON(501, gin.H{
+			"status": "Fail",
+			"error":  "Fail to Bind json",
+			"code":   501,
 		})
 		return
 	}
 
-	var existingAdmin Admin
+	var existingAdmin models.Admin
 	result := initializers.DB.Where("email = ?", admin.Email).First(&existingAdmin)
 
 	if result.Error != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Invalid email or Password",
+		ctx.JSON(401, gin.H{
+			"status": "Fail",
+			"error":  "Invalid email or Password",
+			"code":   401,
 		})
 		return
 	}
 
 	if admin.Password != existingAdmin.Password {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"error": "invalid email or password",
+		ctx.JSON(401, gin.H{
+			"status": "fail",
+			"error":  "invalid email or password",
+			"code":   401,
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Successfully Login to Admin panel",
+	//token:=middleware.JwtTokenStart(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
+	//ctx.SetCookie("jwtToken"+RoleAdmin, token, int((time.Hour * 1).Seconds()), "/", "Audvision.online", false, false)
+	ctx.JSON(202, gin.H{
+		"status":  "success",
+		"message": "successfully Logged to adminpanel",
 	})
 }
 
@@ -119,8 +147,9 @@ func UpdateUser(ctx *gin.Context) {
 	id := ctx.Param("ID")
 
 	if err := initializers.DB.First(&user, id).Error; err != nil {
+		fmt.Println("id",id)
 		ctx.JSON(http.StatusNotFound, gin.H{
-			"error": "usere not found",
+			"error": "user not found",
 		})
 		return
 	}
@@ -147,7 +176,15 @@ func UpdateUser(ctx *gin.Context) {
 func Status(ctx *gin.Context) {
 	var check models.User
 	user := ctx.Param("ID")
-	initializers.DB.First(&check, user)
+	err := initializers.DB.First(&check, user)
+	if err.Error != nil {
+		ctx.JSON(404, gin.H{
+			"status": "Fail",
+			"Error":  "Can't Find User",
+			"code":   404,
+		})
+		return
+	}
 	if check.Status == "Active" {
 		initializers.DB.Model(&check).Update("status", "Blocked")
 		ctx.JSON(http.StatusOK, gin.H{
@@ -159,5 +196,5 @@ func Status(ctx *gin.Context) {
 			"message": "User Unblocked",
 		})
 	}
-	
+
 }
