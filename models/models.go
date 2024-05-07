@@ -3,11 +3,11 @@ package models
 import (
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	//UserID uint `gorm:"primarykey" json:"user_id"`
 	gorm.Model
 	FirstName string `gorm:"not null" json:"firstname"`
 	LastName  string `json:"lastname"`
@@ -16,15 +16,10 @@ type User struct {
 	Phone     string `gorm:"not null" json:"phone_no"`
 	Password  string `gorm:"not null" json:"password"`
 	Status    string `gorm:"default:Active" json:"status"`
-
-	// CreatedAt time.Time  `gorm:"autoCreateTime"`
-	// UpdatedAt time.Time  `gorm:"autoUpdateTime"`
-	// DeletedAt *time.Time
 }
 
 type OTP struct {
-	ID uint `gorm:"primarykey" json:"id"`
-	//gorm.Model
+	ID     uint      `gorm:"primarykey" json:"id"`
 	Otp    string    `json:"otp"`
 	Exp    time.Time //OTP expiry time
 	UserID uint      //Foreign key referencing the user model
@@ -36,32 +31,20 @@ type Admin struct {
 	Password string
 }
 
-type Category struct {
-	gorm.Model
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatesAt   time.Time `gorm:"autoUpdateTime"`
-	DeletedAt   gorm.DeletedAt
-}
-
 type Product struct {
 	gorm.Model
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       string    `json:"price"`
-	Stock       string    `json:"stock"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatesAt   time.Time `gorm:"autoUpdateTime"`
-	DeletedAt   gorm.DeletedAt
-	CategoryID  uint
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Price       string         `json:"price"`
+	Stock       string         `json:"stock"`
+	ImagePath   pq.StringArray `gorm:"type:text[]" json:"image_path"`
+	Status      string         `json:"status"`
+	CategoryID  uint           `json:"category_id"`
 	Category    Category
 }
 
-// type ProductImage struct {
-// 	gorm.Model
-// 	ProductID uint
-// 	Filename  string `json:"filename"`
-// 	URL       string `json:"url"`
-// }
+type Category struct {
+	gorm.Model
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

@@ -4,6 +4,7 @@ import (
 	//"io/ioutil"
 	"fmt"
 	"net/http"
+
 	//"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -16,8 +17,10 @@ func CreateCategory(ctx *gin.Context) {
 
 	err := ctx.BindJSON(&category)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "failed to bind category",
+		ctx.JSON(406, gin.H{
+			"status": "Fail",
+			"error":  "failed to bind category",
+			"code":   406,
 		})
 		return
 	}
@@ -33,12 +36,15 @@ func CreateCategory(ctx *gin.Context) {
 
 	insert := initializers.DB.Create(&category)
 	if insert.Error != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to create category",
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"error":  "failed to insert category",
+			"code":   500,
 		})
 		return
 	}
-	ctx.JSON(http.StatusCreated, gin.H{
+	ctx.JSON(201, gin.H{
+		"status":  "success",
 		"message": "category created successfully",
 	})
 
@@ -71,8 +77,8 @@ func GetCategory(ctx *gin.Context) {
 
 		list = append(list, category)
 	}
-	fmt.Println("list category: ",list)
-	ctx.JSON(http.StatusOK,list)
+	fmt.Println("list category: ", list)
+	ctx.JSON(http.StatusOK, list)
 }
 
 func UpdateCategory(ctx *gin.Context) {
@@ -110,8 +116,8 @@ func UpdateCategory(ctx *gin.Context) {
 	})
 }
 
-func DeleteCategory(ctx *gin.Context){
-	
+func DeleteCategory(ctx *gin.Context) {
+
 }
 
 // func CreateProduct(ctx *gin.Context) {
