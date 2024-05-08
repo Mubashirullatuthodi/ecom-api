@@ -14,4 +14,8 @@ func UserGroup(r *gin.RouterGroup) {
 	r.POST("/user/signup/resend-otp", controllers.ResendOtp)
 	r.POST("/user/login", controllers.UserLogin)
 
+	//product page
+	r.GET("/user/product", controllers.ProductPage)
+	r.GET("/user/product/:ID", controllers.ProductDetail)
+
 }

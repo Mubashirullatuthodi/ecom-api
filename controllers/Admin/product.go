@@ -61,12 +61,13 @@ func ListProducts(ctx *gin.Context) {
 	var listProduct []models.Product
 
 	type list struct {
-		ID           int
-		Name         string
-		Description  string
-		Price        string
-		Quantity     string
-		CategoryName string
+		ID           int      `json:"id"`
+		Name         string   `json:"name"`
+		Image        []string `json:"images"`
+		Description  string   `json:"description"`
+		Price        string   `json:"price"`
+		Quantity     string   `json:"quantity"`
+		CategoryName string   `json:"category_name"`
 	}
 
 	var List []list
@@ -81,8 +82,10 @@ func ListProducts(ctx *gin.Context) {
 	}
 
 	for _, value := range listProduct {
+		fmt.Println("image", value.ImagePath)
 		listproduct := list{
 			ID:           int(value.ID),
+			Image:        value.ImagePath,
 			Name:         value.Name,
 			Description:  value.Description,
 			Price:        value.Price,
@@ -113,24 +116,137 @@ func EditProduct(ctx *gin.Context) {
 		return
 	}
 
-	if err := ctx.BindJSON(&Product); err != nil {
+	contentType := ctx.GetHeader("Content-Type")
+
+	switch contentType {
+	case "application/json":
+		if err := ctx.BindJSON(&Product); err != nil {
+			ctx.JSON(400, gin.H{
+				"status": "Fail",
+				"Error":  "Failed to bind json",
+				"code":   400,
+			})
+			return
+		}
+
+		if err := initializers.DB.Model(&Product).Updates(Product).Error; err != nil {
+			ctx.JSON(500, gin.H{
+				"status": "Fail",
+				"Error":  "Failed To Edit Product",
+				"code":   500,
+			})
+			return
+		}
+
+	case "multipart/form-data":
+		if err := ctx.Request.ParseMultipartForm(0); err != nil {
+			ctx.JSON(400, gin.H{
+				"status": "Fail",
+				"Error":  "Failed to parse form data",
+				"code":   400,
+			})
+			return
+		}
+
+		// file, err := ctx.MultipartForm()
+		// if err != nil {
+		// 	ctx.JSON(400, gin.H{
+		// 		"status": "fail",
+		// 		"Error":  "parsed to multipart form",
+		// 		"code":   400,
+		// 	})
+		// 	return
+		// }
+		images := ctx.Request.MultipartForm.File["images"]
+		for _, img := range images {
+			filepath := "./images/" + img.Filename
+			if err := ctx.SaveUploadedFile(img, filepath); err != nil {
+				ctx.JSON(400, gin.H{
+					"status":  "Fail",
+					"message": "Failed to save image",
+					"code":    400,
+				})
+			}
+			Product.ImagePath = append(Product.ImagePath, filepath)
+			fmt.Println("new: ", Product.ImagePath)
+		}
+		if err := initializers.DB.Save(&Product).Error; err != nil {
+			ctx.JSON(500, gin.H{
+				"status": "Fail",
+				"Error":  "Failed to update product details",
+				"code":   500,
+			})
+			return
+		}
+	default:
 		ctx.JSON(400, gin.H{
 			"status": "Fail",
-			"Error":  "Failed to bind json",
+			"Error":  "Unsupported content type",
 			"code":   400,
 		})
 		return
 	}
 
-	if err := initializers.DB.Model(&Product).Updates(Product).Error; err != nil {
-		ctx.JSON(500, gin.H{
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"message": "Product Edited Successfully",
+	})
+}
+
+
+func ImageUpdate(ctx *gin.Context){
+	var Product models.Product
+
+	id := ctx.Param("ID")
+
+	if err := initializers.DB.First(&Product, id).Error; err != nil {
+		ctx.JSON(404, gin.H{
 			"status": "Fail",
-			"Error":  "Failed To Edit Product",
-			"code":   500,
+			"Error":  "product not found",
+			"code":   404,
 		})
 		return
 	}
 
+	if err := ctx.Request.ParseMultipartForm(0); err != nil {
+		ctx.JSON(400, gin.H{
+			"status": "Fail",
+			"Error":  "Failed to parse form data",
+			"code":   400,
+		})
+		return
+	}
+
+	// file, err := ctx.MultipartForm()
+	// if err != nil {
+	// 	ctx.JSON(400, gin.H{
+	// 		"status": "fail",
+	// 		"Error":  "parsed to multipart form",
+	// 		"code":   400,
+	// 	})
+	// 	return
+	// }
+	images := ctx.Request.MultipartForm.File["images"]
+	for _, img := range images {
+		filepath := "./images/" + img.Filename
+		if err := ctx.SaveUploadedFile(img, filepath); err != nil {
+			ctx.JSON(400, gin.H{
+				"status":  "Fail",
+				"message": "Failed to save image",
+				"code":    400,
+			})
+		}
+		Product.ImagePath = append(Product.ImagePath, filepath)
+		fmt.Println("new: ", Product.ImagePath)
+	}
+	if err := initializers.DB.Save(&Product).Error; err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"Error":  "Failed to update product details",
+			"code":   500,
+		})
+		return
+	}
 	ctx.JSON(200, gin.H{
 		"status":  "success",
 		"message": "Product Edited Successfully",

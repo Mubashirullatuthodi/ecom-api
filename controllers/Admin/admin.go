@@ -103,8 +103,10 @@ func ListUsers(ctx *gin.Context) {
 	var List []list
 
 	if err := initializers.DB.Find(&listuser).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"error":  err.Error(),
+			"code":   500,
 		})
 		return
 	}
@@ -131,12 +133,25 @@ func DeleteUser(ctx *gin.Context) {
 
 	id := ctx.Param("ID")
 	fmt.Println("=============", id)
-	initializers.DB.Where("ID = ?", id).First(&user)
+	if err := initializers.DB.Where("ID = ?", id).First(&user).Error; err != nil {
+		ctx.JSON(404, gin.H{
+			"status": "Fail",
+			"Error":  "User not found",
+			"code":   404,
+		})
+	}
 
 	//soft delete
-	initializers.DB.Delete(&user)
+	if err := initializers.DB.Delete(&user); err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"Error":  "Failed To delete user",
+			"code":   500,
+		})
+	}
 
-	ctx.JSON(http.StatusNoContent, gin.H{
+	ctx.JSON(204, gin.H{
+		"status":  "success",
 		"message": "user delete succesfully",
 	})
 
@@ -147,20 +162,20 @@ func UpdateUser(ctx *gin.Context) {
 	id := ctx.Param("ID")
 
 	if err := initializers.DB.First(&user, id).Error; err != nil {
-		fmt.Println("id",id)
+		fmt.Println("id", id)
 		ctx.JSON(404, gin.H{
-			"status":"Fail",
-			"Error": "user not found",
-			"code":404,
+			"status": "Fail",
+			"Error":  "user not found",
+			"code":   404,
 		})
 		return
 	}
 
 	if err := ctx.BindJSON(&user); err != nil {
 		ctx.JSON(400, gin.H{
-			"status":"Fail",
-			"error": "Failed to bind json",
-			"code":400,
+			"status": "Fail",
+			"error":  "Failed to bind json",
+			"code":   400,
 		})
 		return
 	}
@@ -173,7 +188,7 @@ func UpdateUser(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, gin.H{
-		"status":"success",
+		"status":   "success",
 		"messsage": "Succesfully updated",
 	})
 }
