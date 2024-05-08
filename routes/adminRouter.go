@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	controllers "github.com/mubashir/e-commerce/controllers/Admin"
-	"github.com/mubashir/e-commerce/middleware"
+	//"github.com/mubashir/e-commerce/middleware"
 )
 
 var RoleAdmin = "Admin"
@@ -20,10 +20,13 @@ func AdminGroup(r *gin.RouterGroup) {
 	r.DELETE("/admin/delete/:ID", controllers.DeleteUser)
 
 	// product management
+	r.POST("/admin/product",controllers.AddProduct)
+	r.GET("/admin/product",controllers.ListProducts)
 
+	
 	// category management
-	r.POST("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.CreateCategory)
-	r.GET("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.GetCategory)
-	r.PATCH("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.UpdateCategory)
-	r.DELETE("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteCategory)
+	r.POST("/admin/category", controllers.CreateCategory)
+	r.GET("/admin/category", controllers.GetCategory)
+	r.PATCH("/admin/category/:ID", controllers.UpdateCategory)
+	r.DELETE("/admin/category/:ID", controllers.DeleteCategory)
 }

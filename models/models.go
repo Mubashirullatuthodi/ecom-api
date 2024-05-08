@@ -36,7 +36,7 @@ type Product struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
 	Price       string         `json:"price"`
-	Stock       string         `json:"stock"`
+	Quantity    string         `json:"Quantity"`
 	ImagePath   pq.StringArray `gorm:"type:text[]" json:"image_path"`
 	Status      string         `json:"status"`
 	CategoryID  uint           `json:"category_id"`
