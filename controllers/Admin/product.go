@@ -98,3 +98,41 @@ func ListProducts(ctx *gin.Context) {
 		"Products": List,
 	})
 }
+
+func EditProduct(ctx *gin.Context) {
+	var Product models.Product
+
+	id := ctx.Param("ID")
+
+	if err := initializers.DB.First(&Product, id).Error; err != nil {
+		ctx.JSON(404, gin.H{
+			"status": "Fail",
+			"Error":  "product not found",
+			"code":   404,
+		})
+		return
+	}
+
+	if err := ctx.BindJSON(&Product); err != nil {
+		ctx.JSON(400, gin.H{
+			"status": "Fail",
+			"Error":  "Failed to bind json",
+			"code":   400,
+		})
+		return
+	}
+
+	if err := initializers.DB.Model(&Product).Updates(Product).Error; err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "Fail",
+			"Error":  "Failed To Edit Product",
+			"code":   500,
+		})
+		return
+	}
+
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"message": "Product Edited Successfully",
+	})
+}

@@ -148,15 +148,19 @@ func UpdateUser(ctx *gin.Context) {
 
 	if err := initializers.DB.First(&user, id).Error; err != nil {
 		fmt.Println("id",id)
-		ctx.JSON(http.StatusNotFound, gin.H{
-			"error": "user not found",
+		ctx.JSON(404, gin.H{
+			"status":"Fail",
+			"Error": "user not found",
+			"code":404,
 		})
 		return
 	}
 
 	if err := ctx.BindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
+		ctx.JSON(400, gin.H{
+			"status":"Fail",
+			"error": "Failed to bind json",
+			"code":400,
 		})
 		return
 	}
@@ -168,7 +172,8 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusAccepted, gin.H{
+	ctx.JSON(200, gin.H{
+		"status":"success",
 		"messsage": "Succesfully updated",
 	})
 }

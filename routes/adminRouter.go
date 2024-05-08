@@ -22,6 +22,7 @@ func AdminGroup(r *gin.RouterGroup) {
 	// product management
 	r.POST("/admin/product",controllers.AddProduct)
 	r.GET("/admin/product",controllers.ListProducts)
+	r.PATCH("/admin/product/:ID",controllers.EditProduct)
 
 	
 	// category management
