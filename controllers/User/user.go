@@ -10,13 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 	authotp "github.com/mubashir/e-commerce/AuthOTP"
 	"github.com/mubashir/e-commerce/initializers"
+	"github.com/mubashir/e-commerce/middleware"
 	"github.com/mubashir/e-commerce/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var user models.User
 
-var RoleUser = "User"
+var RoleUser = "user"
 
 func Signup(ctx *gin.Context) {
 
@@ -40,40 +41,40 @@ func Signup(ctx *gin.Context) {
 		return
 	}
 	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"Error": "Failed to hash",
-			})
-			return
-		}
-		user.Password = string(hashedpassword)
-
-		otp := authotp.GenerateOTP()
-
-		otpRecord := models.OTP{
-			Otp:    otp,
-			Exp:    time.Now().Add(5 * time.Minute),
-			UserID: user.ID,
-		}
-		initializers.DB.Create(&otpRecord)
-
-		errr := authotp.SendEmail(user.Email, otp)
-
-		if errr != nil {
-			ctx.JSON(400, gin.H{
-				"status": "Fail",
-				"error":  "Failed to send OTP via email",
-				"code":   400,
-			})
-			return
-		}
-
-		initializers.DB.Create(&user)
-
-		ctx.JSON(200, gin.H{
-			"status":  "success",
-			"message": "Please check your email and enter the OTP",
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"Error": "Failed to hash",
 		})
+		return
+	}
+	user.Password = string(hashedpassword)
+
+	otp := authotp.GenerateOTP()
+
+	otpRecord := models.OTP{
+		Otp:    otp,
+		Exp:    time.Now().Add(5 * time.Minute),
+		UserID: user.ID,
+	}
+	initializers.DB.Create(&otpRecord)
+
+	errr := authotp.SendEmail(user.Email, otp)
+
+	if errr != nil {
+		ctx.JSON(400, gin.H{
+			"status": "Fail",
+			"error":  "Failed to send OTP via email",
+			"code":   400,
+		})
+		return
+	}
+
+	initializers.DB.Create(&user)
+
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"message": "Please check your email and enter the OTP",
+	})
 
 	res := initializers.DB.Unscoped().Where("email=?", user.Email).First(&existingUser)
 	if res.Error == nil && existingUser.DeletedAt.Valid {
@@ -170,15 +171,19 @@ func UserLogin(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(&postinguser); err != nil {
 		ctx.JSON(400, gin.H{
-			"error": err.Error(),
+			"status": "fail",
+			"error":  err.Error(),
+			"code":   400,
 		})
 		return
 	}
 
 	result := initializers.DB.Where("email=?", postinguser.Email).First(&user)
 	if result.Error != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Invalid name or password",
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"error":  "Invalid name or password",
+			"code":   500,
 		})
 		return
 	}
@@ -190,7 +195,26 @@ func UserLogin(ctx *gin.Context) {
 		return
 	}
 
+	middleware.JwtToken(ctx, user.ID, postinguser.Email, RoleUser)
 	ctx.JSON(http.StatusOK, gin.H{
+		"status":"success",
 		"message": "Login Successfully",
+	})
+}
+
+func Logout(ctx *gin.Context) {
+	tokenstring := ctx.GetHeader("Authorization")
+	if tokenstring == "" {
+		ctx.JSON(500, gin.H{
+			"Error": "Token not found",
+		})
+		return
+	}
+	middleware.Userdetails = models.User{}
+	middleware.BlacklistedToken[tokenstring] = true
+
+	ctx.JSON(200, gin.H{
+		"message":   "Successfully Logout",
+		"Blacklist": middleware.BlacklistedToken[tokenstring],
 	})
 }

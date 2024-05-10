@@ -3,9 +3,10 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	controllers "github.com/mubashir/e-commerce/controllers/User"
+	"github.com/mubashir/e-commerce/middleware"
 )
 
-//var roleUser = "User"
+var roleUser = "user"
 
 func UserGroup(r *gin.RouterGroup) {
 	//===================== user authentication ====================
@@ -15,7 +16,7 @@ func UserGroup(r *gin.RouterGroup) {
 	r.POST("/user/login", controllers.UserLogin)
 
 	//product page
-	r.GET("/user/product", controllers.ProductPage)
-	r.GET("/user/product/:ID", controllers.ProductDetail)
+	r.GET("/user/product", middleware.AuthMiddleware(roleUser), controllers.ProductPage)
+	r.GET("/user/product/:ID", middleware.AuthMiddleware(roleUser), controllers.ProductDetail)
 
 }

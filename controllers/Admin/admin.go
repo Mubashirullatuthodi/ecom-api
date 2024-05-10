@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/mubashir/e-commerce/initializers"
+	"github.com/mubashir/e-commerce/middleware"
 	"github.com/mubashir/e-commerce/models"
 )
 
@@ -70,21 +71,23 @@ func AdminLogin(ctx *gin.Context) {
 		return
 	}
 
-	if admin.Password != existingAdmin.Password {
+	if admin.Email == existingAdmin.Email || admin.Password == existingAdmin.Password {
+		//adminID := existingAdmin.ID
+		middleware.JwtToken(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
+		ctx.JSON(200, gin.H{
+			"status":  "success",
+			"message": "successfully Logged to adminpanel",
+		})
+	} else {
 		ctx.JSON(401, gin.H{
 			"status": "fail",
 			"error":  "invalid email or password",
 			"code":   401,
 		})
-		return
 	}
 
 	//token:=middleware.JwtTokenStart(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
 	//ctx.SetCookie("jwtToken"+RoleAdmin, token, int((time.Hour * 1).Seconds()), "/", "Audvision.online", false, false)
-	ctx.JSON(202, gin.H{
-		"status":  "success",
-		"message": "successfully Logged to adminpanel",
-	})
 }
 
 func ListUsers(ctx *gin.Context) {
@@ -217,4 +220,19 @@ func Status(ctx *gin.Context) {
 		})
 	}
 
+}
+
+func AdminLogout(ctx *gin.Context) {
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "token not provided",
+		})
+		return
+	}
+	middleware.BlacklistedToken[token] = true
+	ctx.JSON(200, gin.H{
+		"Message":   "Admin LOGOUT Successfully",
+		"Blacklist": middleware.BlacklistedToken[token],
+	})
 }
