@@ -53,6 +53,7 @@ func Signup(ctx *gin.Context) {
 
 	otpRecord := models.OTP{
 		Otp:    otp,
+		Email:  user.Email,
 		Exp:    time.Now().Add(5 * time.Minute),
 		UserID: user.ID,
 	}
@@ -197,7 +198,7 @@ func UserLogin(ctx *gin.Context) {
 
 	middleware.JwtToken(ctx, user.ID, postinguser.Email, RoleUser)
 	ctx.JSON(http.StatusOK, gin.H{
-		"status":"success",
+		"status":  "success",
 		"message": "Login Successfully",
 	})
 }
@@ -217,4 +218,141 @@ func Logout(ctx *gin.Context) {
 		"message":   "Successfully Logout",
 		"Blacklist": middleware.BlacklistedToken[tokenstring],
 	})
+}
+
+func ForgotPassword(ctx *gin.Context) {
+	type input struct {
+		Email string `json:"email"`
+	}
+	var Input input
+	if err := ctx.ShouldBindJSON(&Input); err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"error":  "failed to bind",
+			"code":   500,
+		})
+		return
+	}
+	result := initializers.DB.Where("email = ?", Input.Email).First(&user)
+	if result.Error != nil {
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"Error":  "failed to check email",
+			"code":   500,
+		})
+		return
+	}
+	otp := authotp.GenerateOTP()
+
+	otpRecord := models.OTP{
+		Otp:    otp,
+		Email:  Input.Email,
+		Exp:    time.Now().Add(5 * time.Minute),
+		UserID: user.ID,
+	}
+	initializers.DB.Create(&otpRecord)
+
+	errr := authotp.SendEmail(Input.Email, otp)
+
+	if errr != nil {
+		ctx.JSON(400, gin.H{
+			"status": "Fail",
+			"error":  "Failed to send OTP via email",
+			"code":   400,
+		})
+		return
+	}
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"message": "otp for reset password is sent to your email,reset your password",
+	})
+}
+
+func OtpCheck(ctx *gin.Context) {
+	type OTP struct {
+		Otp string `json:"otp"`
+	}
+	var newOTP OTP
+	if err := ctx.ShouldBindJSON(&newOTP); err != nil {
+		ctx.JSON(406, gin.H{
+			"status": "Fail",
+			"error":  "json Binding Error",
+			"code":   406,
+		})
+		return
+	}
+
+	var existingOTP models.OTP
+
+	result := initializers.DB.Where("otp = ?", newOTP.Otp).First(&existingOTP)
+	if result.Error != nil {
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"Error":  "Invalid OTP",
+			"code":   500,
+		})
+		return
+	}
+
+	if time.Now().After(existingOTP.Exp) {
+		ctx.JSON(400, gin.H{
+			"error": "OTP has expired. Please request a new otp.",
+		})
+		return
+	}
+	initializers.DB.Delete(&existingOTP)
+
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"message": "Enter new password.",
+	})
+}
+
+func ResetPassword(ctx *gin.Context) {
+	type Input struct {
+		Email       string `json:"email"`
+		Newpassword string `json:"newpassword"`
+	}
+
+	var input Input
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"Error":  "failed to bind",
+			"code":   500,
+		})
+		return
+	}
+
+	errr := initializers.DB.Where("email=?", input.Email).First(&user)
+	if errr.Error != nil {
+		ctx.JSON(404, gin.H{
+			"status": "fail",
+			"Error":  "email not found",
+			"code":   404,
+		})
+		return
+	}
+
+	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(input.Newpassword), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "failed to hash password",
+		})
+		return
+	}
+
+	//user.Password = string(hashedpassword)
+
+	if err := initializers.DB.Model(&user).Update("password", string(hashedpassword)).Error; err != nil {
+		ctx.JSON(500, gin.H{"error": "failed to update password"})
+		return
+	}
+
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"Message": "Password reset successfull",
+	})
+
 }

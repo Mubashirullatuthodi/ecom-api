@@ -21,6 +21,7 @@ type User struct {
 type OTP struct {
 	ID     uint      `gorm:"primarykey" json:"id"`
 	Otp    string    `json:"otp"`
+	Email  string    `json:"email"`
 	Exp    time.Time //OTP expiry time
 	UserID uint      //Foreign key referencing the user model
 }

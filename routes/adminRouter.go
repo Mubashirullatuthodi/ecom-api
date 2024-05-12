@@ -26,6 +26,7 @@ func AdminGroup(r *gin.RouterGroup) {
 	r.GET("/admin/product", controllers.ListProducts)
 	r.PATCH("/admin/product/:ID", controllers.EditProduct)
 	r.PATCH("/admin/product/image/:ID", controllers.ImageUpdate)
+	r.DELETE("/admin/product/:ID", controllers.DeleteProduct)
 
 	// category management
 	r.POST("/admin/category", controllers.CreateCategory)

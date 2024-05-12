@@ -193,8 +193,7 @@ func EditProduct(ctx *gin.Context) {
 	})
 }
 
-
-func ImageUpdate(ctx *gin.Context){
+func ImageUpdate(ctx *gin.Context) {
 	var Product models.Product
 
 	id := ctx.Param("ID")
@@ -251,4 +250,27 @@ func ImageUpdate(ctx *gin.Context){
 		"status":  "success",
 		"message": "Product Edited Successfully",
 	})
+}
+
+func DeleteProduct(ctx *gin.Context) {
+	var product models.Product
+
+	id := ctx.Param("ID")
+
+	if err := initializers.DB.Where("ID = ?", id).First(&product).Error; err != nil {
+		ctx.JSON(404, gin.H{
+			"status": "Fail",
+			"Error":  "User not found",
+			"code":   404,
+		})
+	} else {
+		//soft delete
+		initializers.DB.Delete(&product)
+
+		ctx.JSON(200, gin.H{
+			"status":  "success",
+			"message": "user delete succesfully",
+		})
+	}
+
 }

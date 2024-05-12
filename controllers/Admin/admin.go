@@ -145,14 +145,8 @@ func DeleteUser(ctx *gin.Context) {
 	}
 
 	//soft delete
-	if err := initializers.DB.Delete(&user); err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "Fail",
-			"Error":  "Failed To delete user",
-			"code":   500,
-		})
-	}
-
+	initializers.DB.Delete(&user)
+		
 	ctx.JSON(204, gin.H{
 		"status":  "success",
 		"message": "user delete succesfully",
