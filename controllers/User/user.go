@@ -17,7 +17,8 @@ import (
 
 var user models.User
 
-var RoleUser = "user"
+var RoleUser = "User"
+var Confirmation = false
 
 func Signup(ctx *gin.Context) {
 
@@ -196,7 +197,8 @@ func UserLogin(ctx *gin.Context) {
 		return
 	}
 
-	middleware.JwtToken(ctx, user.ID, postinguser.Email, RoleUser)
+	tokenstring,_:=middleware.JwtToken(ctx, user.ID, postinguser.Email, RoleUser)
+	ctx.SetCookie("Authorization"+RoleUser, tokenstring, 3600*24*30, "", "", false, true)
 	ctx.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Login Successfully",
@@ -204,19 +206,9 @@ func UserLogin(ctx *gin.Context) {
 }
 
 func Logout(ctx *gin.Context) {
-	tokenstring := ctx.GetHeader("Authorization")
-	if tokenstring == "" {
-		ctx.JSON(500, gin.H{
-			"Error": "Token not found",
-		})
-		return
-	}
-	middleware.Userdetails = models.User{}
-	middleware.BlacklistedToken[tokenstring] = true
-
+	ctx.SetCookie("Authorization"+RoleUser,"",-1,"","",false,true)
 	ctx.JSON(200, gin.H{
 		"message":   "Successfully Logout",
-		"Blacklist": middleware.BlacklistedToken[tokenstring],
 	})
 }
 
@@ -300,6 +292,9 @@ func OtpCheck(ctx *gin.Context) {
 		})
 		return
 	}
+
+	Confirmation = true
+
 	initializers.DB.Delete(&existingOTP)
 
 	ctx.JSON(200, gin.H{
@@ -325,34 +320,41 @@ func ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	errr := initializers.DB.Where("email=?", input.Email).First(&user)
-	if errr.Error != nil {
-		ctx.JSON(404, gin.H{
-			"status": "fail",
-			"Error":  "email not found",
-			"code":   404,
-		})
-		return
-	}
-
-	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(input.Newpassword), bcrypt.DefaultCost)
-	if err != nil {
+	if !Confirmation {
 		ctx.JSON(500, gin.H{
-			"status": "failed to hash password",
+			"status":  "fail",
+			"message": "validate the otp",
+			"code":    500,
 		})
-		return
+	} else {
+		errr := initializers.DB.Where("email=?", input.Email).First(&user)
+		if errr.Error != nil {
+			ctx.JSON(404, gin.H{
+				"status": "fail",
+				"Error":  "email not found",
+				"code":   404,
+			})
+			return
+		}
+
+		hashedpassword, err := bcrypt.GenerateFromPassword([]byte(input.Newpassword), bcrypt.DefaultCost)
+		if err != nil {
+			ctx.JSON(500, gin.H{
+				"status": "failed to hash password",
+			})
+			return
+		}
+
+		//user.Password = string(hashedpassword)
+
+		if err := initializers.DB.Model(&user).Update("password", string(hashedpassword)).Error; err != nil {
+			ctx.JSON(500, gin.H{"error": "failed to update password"})
+			return
+		}
+		Confirmation = false
+		ctx.JSON(200, gin.H{
+			"status":  "success",
+			"Message": "Password reset successfull",
+		})
 	}
-
-	//user.Password = string(hashedpassword)
-
-	if err := initializers.DB.Model(&user).Update("password", string(hashedpassword)).Error; err != nil {
-		ctx.JSON(500, gin.H{"error": "failed to update password"})
-		return
-	}
-
-	ctx.JSON(200, gin.H{
-		"status":  "success",
-		"Message": "Password reset successfull",
-	})
-
 }

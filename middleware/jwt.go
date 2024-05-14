@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -9,9 +10,7 @@ import (
 	"github.com/mubashir/e-commerce/models"
 )
 
-var SecretKey = []byte("qwertuiouplkhgfdsazxcvbnm")
 var Userdetails models.User
-var BlacklistedToken = make(map[string]bool)
 
 type Claims struct {
 	ID    uint
@@ -20,7 +19,7 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func JwtToken(c *gin.Context, id uint, email string, role string) {
+func JwtToken(c *gin.Context, id uint, email string, role string) (string, error) {
 	claims := Claims{
 		ID:    id,
 		Email: email,
@@ -31,32 +30,25 @@ func JwtToken(c *gin.Context, id uint, email string, role string) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString(SecretKey)
+	signedToken, err := token.SignedString([]byte(os.Getenv("SECRETKEY")))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": "Failed to sign token"})
-		return
+		return "", nil
 	}
 
-	c.JSON(http.StatusOK, gin.H{"Token": signedToken})
+	return signedToken, nil
 }
 
 func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenstring := c.GetHeader("Authorization")
-		if tokenstring == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "Token not provided"})
-			c.Abort()
-			return
+		tokenstring, err := c.Cookie("Authorization" + requiredRole)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
 		}
-		if BlacklistedToken[tokenstring] {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "please login!!"})
-			c.Abort()
-			return
-		}
-
+		
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenstring, claims, func(token *jwt.Token) (interface{}, error) {
-			return SecretKey, nil
+			return []byte(os.Getenv("SECRETKEY")), nil
 		})
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid token"})

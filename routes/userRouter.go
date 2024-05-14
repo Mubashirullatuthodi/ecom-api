@@ -6,10 +6,10 @@ import (
 	"github.com/mubashir/e-commerce/middleware"
 )
 
-var roleUser = "user"
+var roleUser = "User"
 
 func UserGroup(r *gin.RouterGroup) {
-	//===================== user authentication ====================
+	//user authentication
 	r.POST("/user/signup", controllers.Signup)
 	r.POST("/user/signup/verify-otp", controllers.PostOtp)
 	r.POST("/user/signup/resend-otp", controllers.ResendOtp)

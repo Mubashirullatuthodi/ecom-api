@@ -72,8 +72,8 @@ func AdminLogin(ctx *gin.Context) {
 	}
 
 	if admin.Email == existingAdmin.Email || admin.Password == existingAdmin.Password {
-		//adminID := existingAdmin.ID
-		middleware.JwtToken(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
+		tokenstring, _ := middleware.JwtToken(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
+		ctx.SetCookie("Authorization"+RoleAdmin, tokenstring, 3600*24*30, "", "", false, true)
 		ctx.JSON(200, gin.H{
 			"status":  "success",
 			"message": "successfully Logged to adminpanel",
@@ -85,9 +85,6 @@ func AdminLogin(ctx *gin.Context) {
 			"code":   401,
 		})
 	}
-
-	//token:=middleware.JwtTokenStart(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
-	//ctx.SetCookie("jwtToken"+RoleAdmin, token, int((time.Hour * 1).Seconds()), "/", "Audvision.online", false, false)
 }
 
 func ListUsers(ctx *gin.Context) {
@@ -146,7 +143,7 @@ func DeleteUser(ctx *gin.Context) {
 
 	//soft delete
 	initializers.DB.Delete(&user)
-		
+
 	ctx.JSON(204, gin.H{
 		"status":  "success",
 		"message": "user delete succesfully",
@@ -217,16 +214,8 @@ func Status(ctx *gin.Context) {
 }
 
 func AdminLogout(ctx *gin.Context) {
-	token := ctx.GetHeader("Authorization")
-	if token == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "token not provided",
-		})
-		return
-	}
-	middleware.BlacklistedToken[token] = true
+	ctx.SetCookie("Authorization"+RoleAdmin, "", -1, "", "", false, true)
 	ctx.JSON(200, gin.H{
-		"Message":   "Admin LOGOUT Successfully",
-		"Blacklist": middleware.BlacklistedToken[token],
+		"Message": "Admin LOGOUT Successfully",
 	})
 }
