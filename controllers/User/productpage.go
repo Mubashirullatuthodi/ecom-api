@@ -46,21 +46,51 @@ func ProductPage(ctx *gin.Context) {
 }
 
 func ProductDetail(ctx *gin.Context) {
-	var Product models.Product
+	var listProduct []models.Product
 
-	id := ctx.Param("ID")
+	type list struct {
+		ID                  int      `json:"id"`
+		Name                string   `json:"name"`
+		Image               []string `json:"images"`
+		Description         string   `json:"description"`
+		Price               string   `json:"price"`
+		Quantity            string   `json:"quantity"`
+		CategoryName        string   `json:"category_name"`
+		CategoryDescription string   `json:"category_description"`
+	}
 
-	if err := initializers.DB.Preload("Category").First(&Product, id).Error; err != nil {
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "product not found",
-			"code":   404,
+	var List []list
+
+	id:=ctx.Param("ID")
+
+	if err := initializers.DB.Preload("Category").Where("id=?",id).Find(&listProduct).Error; err != nil {
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"error":  "failed to list products",
+			"code":   500,
 		})
 		return
 	}
 
+	for _, value := range listProduct {
+		fmt.Println("image", value.ImagePath)
+		listproduct := list{
+			ID:                  int(value.ID),
+			Image:               value.ImagePath,
+			Name:                value.Name,
+			Description:         value.Description,
+			Price:               value.Price,
+			Quantity:            value.Quantity,
+			CategoryName:        value.Category.Name,
+			CategoryDescription: value.Category.Description,
+		}
+		List = append(List, listproduct)
+	}
+	fmt.Println("list roducts: ", List)
+
 	ctx.JSON(200, gin.H{
-		"status":  "Success",
-		"product": Product,
+		"status":   "success",
+		"Products": List,
 	})
+
 }

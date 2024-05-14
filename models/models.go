@@ -46,6 +46,6 @@ type Product struct {
 
 type Category struct {
 	gorm.Model
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string `json:"category_name"`
+	Description string `json:"category_description"`
 }
