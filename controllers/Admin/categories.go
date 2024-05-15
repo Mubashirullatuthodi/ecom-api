@@ -17,22 +17,13 @@ func CreateCategory(ctx *gin.Context) {
 
 	err := ctx.BindJSON(&category)
 	if err != nil {
-		ctx.JSON(406, gin.H{
+		ctx.JSON(400, gin.H{
 			"status": "Fail",
 			"error":  "failed to bind category",
-			"code":   406,
+			"code":   400,
 		})
 		return
 	}
-
-	// var existingcategory models.Category
-	// initializers.DB.Where("name=?",category.Name).First(&existingcategory)
-	// if existingcategory.Name == category.Name{
-	// 	ctx.JSON(http.StatusConflict,gin.H{
-	// 		"error":"this category already exist",
-	// 	})
-	// 	return
-	// }
 
 	insert := initializers.DB.Create(&category)
 	if insert.Error != nil {

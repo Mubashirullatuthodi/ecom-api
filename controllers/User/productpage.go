@@ -22,7 +22,7 @@ func ProductPage(ctx *gin.Context) {
 	if err := initializers.DB.Find(&Product).Error; err != nil {
 		ctx.JSON(500, gin.H{
 			"status": "Fail",
-			"Error":  err.Error(),
+			"Error":  "Cant find products",
 			"code":   500,
 		})
 		return
