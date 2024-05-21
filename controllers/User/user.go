@@ -142,8 +142,6 @@ func PostOtp(ctx *gin.Context) {
 			Status:    newuser.Status,
 		}
 
-		newuser = newUser{}
-
 		initializers.DB.Create(&usernew)
 
 		initializers.DB.Delete(&otp)
@@ -153,6 +151,13 @@ func PostOtp(ctx *gin.Context) {
 
 		res := initializers.DB.Unscoped().Where("email=?", usernew.Email).First(&existingUser)
 		if res.Error == nil && existingUser.DeletedAt.Valid {
+			existingUser.FirstName = newuser.FirstName
+			existingUser.LastName = newuser.LastName
+			existingUser.Email = newuser.Email
+			existingUser.Gender = newuser.Gender
+			existingUser.Phone = newuser.Phone
+			existingUser.Password = newuser.Password
+			//existingUser.CreatedAt = time.Now()
 			existingUser.DeletedAt.Time = time.Time{}
 			existingUser.DeletedAt.Valid = false
 			if err := initializers.DB.Save(&existingUser).Error; err != nil {
@@ -172,99 +177,52 @@ func PostOtp(ctx *gin.Context) {
 			"code":   500,
 		})
 	}
+	newuser = newUser{}
 }
 
 func ResendOtp(ctx *gin.Context) {
-	//var userOTP models.OTP
-	// if err := ctx.ShouldBindJSON(&userOTP); err != nil {
-	// 	ctx.JSON(400, gin.H{
-	// 		"error": err.Error(),
-	// 	})
-	// 	return
-	// }
-
 	var existOTP models.OTP
 
-	result := initializers.DB.Where("email = ? AND exp < ?", newuser.Email, time.Now()).First(&existOTP)
-	if result.Error == nil {
-		ctx.JSON(400, gin.H{
-			"error": "no valid OTP found",
+	result := initializers.DB.Where("email=?", newuser.Email).First(&existOTP)
+	if result.Error != nil {
+		ctx.JSON(500, gin.H{
+			"status": "fail",
+			"error":  "failed to resend",
+			"code":   500,
 		})
 		return
-		}
-		// result := initializers.DB.Where("email=?", newuser.Email).First(&existOTP)
-		// if result.Error != nil {
-		// 	ctx.JSON(500, gin.H{
-		// 		"status": "fail",
-		// 		"error":  "no valid OTP found",
-		// 		"code":   500,
-		// 	})
-		// 	return
-		// }
+	}
 
-		// if err := initializers.DB.Where("email = ?", newuser.Email).First(&existOTP).Error; err != nil {
-		// 	ctx.JSON(404, gin.H{
-		// 		"status": "Fail",
-		// 		"Error":  "Email not found",
-		// 		"code":   404,
-		// 	})
-		// }
-		newOTP := authotp.GenerateOTP()
-		fmt.Println("=================otp:",newOTP)
+	newOTP := authotp.GenerateOTP()
+	fmt.Println("=================otp:", newOTP)
 
-		// otpRecord := models.OTP{
-		// 	Otp:    newOTP,
-		// 	Email:  newuser.Email,
-		// 	Exp:    time.Now().Add(5 * time.Minute),
-		// 	UserID: user.ID,
-		// }
+	fmt.Println("=========================existotp: ", existOTP.Otp)
 
-		// initializers.DB.Save(&otpRecord)
+	fmt.Println("===========================email: ", newuser.Email)
+	fmt.Println("===========================otpemail: ", existOTP.Email)
+	if existOTP.Email == newuser.Email {
 		existOTP.Otp = newOTP
 		existOTP.Email = newuser.Email
 		existOTP.Exp = time.Now().Add(5 * time.Minute)
-		initializers.DB.Save(&existOTP)
-		// if err := initializers.DB.Model(&existOTP).Updates(existOTP).Error; err != nil {
-		// 	ctx.JSON(http.StatusInternalServerError, gin.H{
-		// 		"error": err.Error(),
-		// 	})
-		// 	return
-		// }
-		fmt.Println("===========================email: ", newuser.Email)
-		fmt.Println("===========================otpemail: ", existOTP.Email)
-		err := authotp.SendEmail(newuser.Email, newOTP)
-		if err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "Failed to send OTP via Email",
-			})
+		if err := initializers.DB.Save(&existOTP).Error; err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update OTP record"})
 			return
 		}
-
-		ctx.JSON(200, gin.H{
-			"message": "new OTP sent successfully,please check your email",
+	}
+	err := authotp.SendEmail(newuser.Email, newOTP)
+	if err != nil {
+		ctx.JSON(500, gin.H{
+			"error": "Failed to send OTP via Email",
 		})
-
-		// if err := initializers.DB.Where("email=?",newuser.Email).Find(&existOTP).Error;err!=nil{
-		// 	ctx.JSON(400,gin.H{
-		// 		"error":"User not found",
-		// 	})
-		// 	return
-		// }
-
-		// newOtp:=authotp.GenerateOTP()
-		// existOTP.Otp=newOtp
-		// existOTP.Email=newuser.Email
-		// existOTP.Exp=time.Now().Add(5*time.Minute)
-		// if err := initializers.DB.Save(&existOTP).Error;err!=nil{
-		// 	ctx.JSON(500,gin.H{
-		// 		"error":"failed to update OTP",
-		// 	})
-		// 	return
-		// }
-
-		// err:=authotp.SendEmail(newuser.Email,newOtp)
+		return
 	}
 
+	ctx.JSON(200, gin.H{
+		"message": "new OTP sent successfully,please check your email",
+	})
+
+}
 
 func UserLogin(ctx *gin.Context) {
 	var postinguser struct {
@@ -303,7 +261,7 @@ func UserLogin(ctx *gin.Context) {
 
 	if user.Status == "Active" {
 		tokenstring, _ := middleware.JwtToken(ctx, user.ID, postinguser.Email, RoleUser)
-		ctx.SetCookie("Authorization"+RoleUser, tokenstring, 3600*24*30, "", "", false, true)
+		ctx.SetCookie("Authorization"+RoleUser, tokenstring, int((time.Hour * 1).Seconds()), "", "", false, true)
 		ctx.JSON(http.StatusOK, gin.H{
 			"status":  "success",
 			"message": "Login Successfully",
@@ -368,7 +326,7 @@ func ForgotPassword(ctx *gin.Context) {
 	}
 	ctx.JSON(200, gin.H{
 		"status":  "success",
-		"message": "otp for reset password is sent to your email,reset your password",
+		"message": "OTP for reset password is sent to your email,validate OTP",
 	})
 }
 
@@ -443,7 +401,7 @@ func ResetPassword(ctx *gin.Context) {
 		if errr.Error != nil {
 			ctx.JSON(404, gin.H{
 				"status": "fail",
-				"Error":  "email not found",
+				"Error":  "email account not exist",
 				"code":   404,
 			})
 			return

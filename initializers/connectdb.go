@@ -24,5 +24,5 @@ func ConnectDB(){
 		log.Fatal("error connecting to database")
 	}
 
-	DB.AutoMigrate(&models.User{},&models.Admin{},&models.OTP{},&models.Category{},&models.Product{})
+	DB.AutoMigrate(&models.User{},&models.Admin{},&models.OTP{},&models.Category{},&models.Product{},&models.Address{},&models.Cart{})
 }

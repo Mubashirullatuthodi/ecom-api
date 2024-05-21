@@ -51,7 +51,7 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 			return []byte(os.Getenv("SECRETKEY")), nil
 		})
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": "Invalid token"})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "Please Login !!!"})
 			c.Abort()
 			return
 		}

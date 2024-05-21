@@ -23,4 +23,23 @@ func UserGroup(r *gin.RouterGroup) {
 	r.GET("/user/product", controllers.ProductPage)
 	r.GET("/user/product/:ID", middleware.AuthMiddleware(roleUser), controllers.ProductDetail)
 
+	//User Address
+	r.POST("/user/address", middleware.AuthMiddleware(roleUser), controllers.AddAddress)
+	r.PATCH("/user/address/:ID", middleware.AuthMiddleware(roleUser), controllers.EditAddress)
+	r.DELETE("/user/address/:ID", middleware.AuthMiddleware(roleUser), controllers.DeleteAddress)
+
+	//User Profile
+	r.GET("/user/profile/address", middleware.AuthMiddleware(roleUser), controllers.ListAddress)
+
+	//cart management
+	r.POST("/user/cart", middleware.AuthMiddleware(roleUser), controllers.AddtoCart)
+	r.GET("/user/cart", middleware.AuthMiddleware(roleUser), controllers.ListCart)
+	//r.POST("/user/cart/reducing/:ID", middleware.AuthMiddleware(roleUser), controllers.ReducingQuantity)
+	r.DELETE("/user/cart/:ID", middleware.AuthMiddleware(roleUser), controllers.RemoveCart)
+
+	//checkout page
+
+
+
+
 }

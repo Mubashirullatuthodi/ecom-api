@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -73,7 +74,7 @@ func AdminLogin(ctx *gin.Context) {
 
 	if admin.Email == existingAdmin.Email || admin.Password == existingAdmin.Password {
 		tokenstring, _ := middleware.JwtToken(ctx, existingAdmin.ID, existingAdmin.Email, RoleAdmin)
-		ctx.SetCookie("Authorization"+RoleAdmin, tokenstring, 3600*24*30, "", "", false, true)
+		ctx.SetCookie("Authorization"+RoleAdmin, tokenstring, int((time.Hour * 1).Seconds()), "", "", false, true)
 		ctx.JSON(200, gin.H{
 			"status":  "success",
 			"message": "successfully Logged to adminpanel",

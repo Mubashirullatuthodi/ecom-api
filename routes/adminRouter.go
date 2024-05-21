@@ -16,21 +16,21 @@ func AdminGroup(r *gin.RouterGroup) {
 	r.GET("/admin/logout", middleware.AuthMiddleware(RoleAdmin), controllers.AdminLogout)
 
 	//user management
-	r.GET("/admin/usermanagement", middleware.AuthMiddleware(RoleAdmin), controllers.ListUsers)
+	r.GET("/admin/listusers", middleware.AuthMiddleware(RoleAdmin), controllers.ListUsers)
 	r.PATCH("/admin/block/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.Status)
 	r.PATCH("/admin/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.UpdateUser)
-	r.DELETE("/admin/delete/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteUser)
+	r.DELETE("/admin/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteUser)
 
 	// product management
-	r.POST("/admin/product", controllers.AddProduct)
-	r.GET("/admin/product", controllers.ListProducts)
-	r.PATCH("/admin/product/:ID", controllers.EditProduct)
-	r.PATCH("/admin/product/image/:ID", controllers.ImageUpdate)
-	r.DELETE("/admin/product/:ID", controllers.DeleteProduct)
+	r.POST("/admin/product", middleware.AuthMiddleware(RoleAdmin), controllers.AddProduct)
+	r.GET("/admin/product", middleware.AuthMiddleware(RoleAdmin), controllers.ListProducts)
+	r.PATCH("/admin/product/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.EditProduct)
+	r.PATCH("/admin/product/image/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.ImageUpdate)
+	r.DELETE("/admin/product/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteProduct)
 
 	// category management
-	r.POST("/admin/category", controllers.CreateCategory)
-	r.GET("/admin/category", controllers.GetCategory)
-	r.PATCH("/admin/category/:ID", controllers.UpdateCategory)
-	r.DELETE("/admin/category/:ID", controllers.DeleteCategory)
+	r.POST("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.CreateCategory)
+	r.GET("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.GetCategory)
+	r.PATCH("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.UpdateCategory)
+	r.DELETE("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteCategory)
 }

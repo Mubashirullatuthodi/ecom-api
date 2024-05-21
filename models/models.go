@@ -21,7 +21,7 @@ type User struct {
 type OTP struct {
 	ID     uint      `gorm:"primarykey" json:"id"`
 	Otp    string    `json:"otp"`
-	Email  string    `json:"email"`
+	Email  string    `gorm:"unique" json:"email"`
 	Exp    time.Time //OTP expiry time
 	UserID uint      //Foreign key referencing the user model
 }
@@ -48,4 +48,24 @@ type Category struct {
 	gorm.Model
 	Name        string `json:"category_name"`
 	Description string `json:"category_description"`
+}
+
+type Address struct {
+	gorm.Model
+	Address  string `json:"address"`
+	Town     string `json:"town"`
+	District string `json:"district"`
+	Pincode  string `json:"pincode"`
+	State    string `json:"state"`
+	User_ID  uint   `json:"user_id"`
+	User     User
+}
+
+type Cart struct {
+	ID         uint `gorm:"primaryKey"`
+	User_ID    uint `json:"user_id"`
+	Product_ID uint `json:"product_id"`
+	Quantity   uint `json:"quantity"`
+	User       User
+	Product    Product
 }

@@ -139,45 +139,7 @@ func EditProduct(ctx *gin.Context) {
 		}
 
 	case "multipart/form-data":
-		if err := ctx.Request.ParseMultipartForm(0); err != nil {
-			ctx.JSON(400, gin.H{
-				"status": "Fail",
-				"Error":  "Failed to parse form data",
-				"code":   400,
-			})
-			return
-		}
 
-		// file, err := ctx.MultipartForm()
-		// if err != nil {
-		// 	ctx.JSON(400, gin.H{
-		// 		"status": "fail",
-		// 		"Error":  "parsed to multipart form",
-		// 		"code":   400,
-		// 	})
-		// 	return
-		// }
-		images := ctx.Request.MultipartForm.File["images"]
-		for _, img := range images {
-			filepath := "./images/" + img.Filename
-			if err := ctx.SaveUploadedFile(img, filepath); err != nil {
-				ctx.JSON(400, gin.H{
-					"status":  "Fail",
-					"message": "Failed to save image",
-					"code":    400,
-				})
-			}
-			Product.ImagePath = append(Product.ImagePath, filepath)
-			fmt.Println("new: ", Product.ImagePath)
-		}
-		if err := initializers.DB.Save(&Product).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"status": "Fail",
-				"Error":  "Failed to update product details",
-				"code":   500,
-			})
-			return
-		}
 	default:
 		ctx.JSON(400, gin.H{
 			"status": "Fail",
