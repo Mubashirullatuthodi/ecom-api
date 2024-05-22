@@ -14,7 +14,7 @@ func ProductPage(ctx *gin.Context) {
 	type productlist struct {
 		ID    int
 		Name  string
-		Price string
+		Price float64
 	}
 
 	var List []productlist
@@ -53,7 +53,7 @@ func ProductDetail(ctx *gin.Context) {
 		Name                string   `json:"name"`
 		Image               []string `json:"images"`
 		Description         string   `json:"description"`
-		Price               string   `json:"price"`
+		Price               float64  `json:"price"`
 		Quantity            string   `json:"quantity"`
 		CategoryName        string   `json:"category_name"`
 		CategoryDescription string   `json:"category_description"`
@@ -61,9 +61,9 @@ func ProductDetail(ctx *gin.Context) {
 
 	var List []list
 
-	id:=ctx.Param("ID")
+	id := ctx.Param("ID")
 
-	if err := initializers.DB.Preload("Category").Where("id=?",id).Find(&listProduct).Error; err != nil {
+	if err := initializers.DB.Preload("Category").Where("id=?", id).Find(&listProduct).Error; err != nil {
 		ctx.JSON(500, gin.H{
 			"status": "fail",
 			"error":  "failed to list products",

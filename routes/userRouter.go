@@ -37,9 +37,10 @@ func UserGroup(r *gin.RouterGroup) {
 	//r.POST("/user/cart/reducing/:ID", middleware.AuthMiddleware(roleUser), controllers.ReducingQuantity)
 	r.DELETE("/user/cart/:ID", middleware.AuthMiddleware(roleUser), controllers.RemoveCart)
 
+	//search filter
+	r.GET("/user/search", middleware.AuthMiddleware(roleUser), controllers.SearchProduct)
+
 	//checkout page
-
-
-
+	r.GET("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.CheckoutCart)
 
 }

@@ -22,6 +22,8 @@ func AddtoCart(ctx *gin.Context) {
 		})
 		return
 	}
+	id := ctx.GetUint("userid")
+	fmt.Println("id=====================", id)
 
 	var product models.Product
 	result := initializers.DB.First(&product, addcart.Productid)
@@ -46,9 +48,8 @@ func AddtoCart(ctx *gin.Context) {
 		return
 	}
 
-
 	var existingCart models.Cart
-	result = initializers.DB.Where("user_id=? AND product_id=?", addcart.Userid, addcart.Productid).First(&existingCart)
+	result = initializers.DB.Where("user_id=? AND product_id=?", id, addcart.Productid).First(&existingCart)
 	if result.Error == nil {
 		newQuantity := existingCart.Quantity + addcart.Quantity
 		if newQuantity > uint(qty) {
@@ -74,8 +75,9 @@ func AddtoCart(ctx *gin.Context) {
 			"message": "Cart Updated Successfully",
 		})
 	} else {
+
 		Addcart := models.Cart{
-			User_ID:    addcart.Userid,
+			User_ID:    id,
 			Product_ID: addcart.Productid,
 			Quantity:   addcart.Quantity,
 		}
@@ -120,11 +122,9 @@ func ListCart(ctx *gin.Context) {
 	var List []Showcart
 
 	for _, value := range listcart {
-		PriceFloat, _ := strconv.ParseFloat(value.Product.Price, 64)
-		fmt.Println("converted======================", PriceFloat)
 		qty := strconv.FormatUint(uint64(value.Quantity), 10)
 		fmt.Println("============================", qty)
-		total := PriceFloat * float64(value.Quantity)
+		total := value.Product.Price * float64(value.Quantity)
 		fmt.Println("total=============================", total)
 		totalPrice := strconv.FormatFloat(total, 'f', -1, 64)
 		list := Showcart{
@@ -167,7 +167,6 @@ func RemoveCart(ctx *gin.Context) {
 		"message": "cart removed successfully",
 	})
 }
-
 
 // func ReducingQuantity(ctx *gin.Context){
 // 	id := ctx.Param("ID")

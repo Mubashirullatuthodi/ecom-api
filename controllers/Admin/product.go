@@ -29,7 +29,7 @@ func AddProduct(ctx *gin.Context) {
 	Product.Name = ctx.Request.FormValue("name")
 	Product.Quantity = ctx.Request.FormValue("quantity")
 	Product.Description = ctx.Request.FormValue("description")
-	Product.Price = ctx.Request.FormValue("price")
+	Product.Price, _ = strconv.ParseFloat(ctx.Request.FormValue("price"), 64)
 	images := file.File["images"]
 	for _, img := range images {
 		filePath := "./images/" + img.Filename
@@ -65,7 +65,7 @@ func ListProducts(ctx *gin.Context) {
 		Name         string   `json:"name"`
 		Image        []string `json:"images"`
 		Description  string   `json:"description"`
-		Price        string   `json:"price"`
+		Price        float64  `json:"price"`
 		Quantity     string   `json:"quantity"`
 		CategoryName string   `json:"category_name"`
 	}
