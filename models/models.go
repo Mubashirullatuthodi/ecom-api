@@ -36,7 +36,7 @@ type Product struct {
 	gorm.Model
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
-	Price       float64           `json:"price"`
+	Price       float64        `json:"price"`
 	Quantity    string         `json:"Quantity"`
 	ImagePath   pq.StringArray `gorm:"type:text[]" json:"image_path"`
 	Status      string         `json:"status"`
@@ -68,4 +68,28 @@ type Cart struct {
 	Quantity   uint `json:"quantity"`
 	User       User
 	Product    Product
+}
+
+type Order struct {
+	gorm.Model
+	OrderCode     string `gorm:"unique"`
+	UserId        uint
+	User          User
+	TotalQuantity int
+	TotalAmount   float64
+	PaymentMethod string
+	AddressID     uint
+	Address       Address
+	OrderDate     time.Time
+	OrderStatus   string `json:"orderstatus" gorm:"default:Pending"`
+}
+
+type OrderItems struct {
+	gorm.Model
+	OrderID   uint
+	Order     Order
+	ProductID uint
+	Product   Product
+	Quantity  int
+	SubTotal  float64
 }

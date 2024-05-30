@@ -33,4 +33,9 @@ func AdminGroup(r *gin.RouterGroup) {
 	r.GET("/admin/category", middleware.AuthMiddleware(RoleAdmin), controllers.GetCategory)
 	r.PATCH("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.UpdateCategory)
 	r.DELETE("/admin/category/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteCategory)
+
+	//order management
+	r.GET("/admin/orderdetails",middleware.AuthMiddleware(RoleAdmin),controllers.GetOrderDetails)
+	r.POST("/admin/order/:ID",middleware.AuthMiddleware(RoleAdmin),controllers.ChangeOrderStatus)
+	r.POST("/admin/cancelorder",middleware.AuthMiddleware(RoleAdmin),controllers.CancelOrder)
 }

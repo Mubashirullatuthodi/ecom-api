@@ -12,6 +12,8 @@ import (
 func AddAddress(ctx *gin.Context) {
 	var user models.User
 
+	userID := ctx.GetUint("userid")
+
 	var inputAddress struct {
 		User_ID  uint   `json:"user_id"`
 		Address  string `json:"address"`
@@ -30,7 +32,7 @@ func AddAddress(ctx *gin.Context) {
 		return
 	}
 
-	if err := initializers.DB.First(&user, inputAddress.User_ID).Error; err != nil {
+	if err := initializers.DB.First(&user, userID).Error; err != nil {
 		ctx.JSON(400, gin.H{
 			"status": "Fail",
 			"Error":  "user ID not found to add address",
@@ -41,7 +43,7 @@ func AddAddress(ctx *gin.Context) {
 
 	AddressUser := models.Address{
 
-		User_ID:  inputAddress.User_ID,
+		User_ID:  userID,
 		Address:  inputAddress.Address,
 		District: inputAddress.District,
 		Town:     inputAddress.Town,
@@ -65,6 +67,8 @@ func AddAddress(ctx *gin.Context) {
 }
 
 func EditAddress(ctx *gin.Context) {
+	userID:=ctx.GetUint("userid")
+
 	var editAddress struct {
 		User_id  uint   `json:"user_id"`
 		Address  string `json:"address"`
@@ -90,7 +94,7 @@ func EditAddress(ctx *gin.Context) {
 		})
 		return
 	}
-	if editAddress.User_id == address.User_ID {
+	if address.User_ID == userID {
 		address.Address = editAddress.Address
 		address.District = editAddress.District
 		address.Pincode = editAddress.Pincode

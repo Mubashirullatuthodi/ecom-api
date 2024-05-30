@@ -30,11 +30,21 @@ func UserGroup(r *gin.RouterGroup) {
 
 	//User Profile
 	r.GET("/user/profile/address", middleware.AuthMiddleware(roleUser), controllers.ListAddress)
+	r.PATCH("/user/profile", middleware.AuthMiddleware(roleUser), controllers.EditProfile) //---
+	r.POST("/user/profile/changepassword", middleware.AuthMiddleware(roleUser), controllers.ProfileChangePassword)
+
+	//orders
+	r.GET("/user/profile/orders", middleware.AuthMiddleware(roleUser), controllers.OrderDetails)
+	r.POST("/user/profile/orders", middleware.AuthMiddleware(roleUser), controllers.CancelOrder)
+
+	//forgotPassword
+	r.POST("/user/profile/forgotpassword", middleware.AuthMiddleware(roleUser), controllers.ProfileForgotPassword)
+	r.POST("/user/profile/forgototpcheck", middleware.AuthMiddleware(roleUser), controllers.OtpCheck)
+	r.POST("/user/profile/forgotresetpassword", middleware.AuthMiddleware(roleUser), controllers.ResetPassword)
 
 	//cart management
 	r.POST("/user/cart", middleware.AuthMiddleware(roleUser), controllers.AddtoCart)
 	r.GET("/user/cart", middleware.AuthMiddleware(roleUser), controllers.ListCart)
-	//r.POST("/user/cart/reducing/:ID", middleware.AuthMiddleware(roleUser), controllers.ReducingQuantity)
 	r.DELETE("/user/cart/:ID", middleware.AuthMiddleware(roleUser), controllers.RemoveCart)
 
 	//search filter
@@ -42,5 +52,6 @@ func UserGroup(r *gin.RouterGroup) {
 
 	//checkout page
 	r.GET("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.CheckoutCart)
+	r.POST("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.PlaceOrder)
 
 }
