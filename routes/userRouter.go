@@ -54,4 +54,21 @@ func UserGroup(r *gin.RouterGroup) {
 	r.GET("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.CheckoutCart)
 	r.POST("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.PlaceOrder)
 
+	//Wishlist
+	r.POST("/user/addwishlist/:ID", middleware.AuthMiddleware(roleUser), controllers.AddToWishlist)
+	r.DELETE("/user/removewishlist/:ID", middleware.AuthMiddleware(roleUser), controllers.RemoveWishlist)
+	r.GET("/user/wishlist", middleware.AuthMiddleware(roleUser), controllers.ListWishList)
+
+	//payment
+	r.GET("/payment", func(ctx *gin.Context) {
+		token := ctx.GetString("token")
+		//ctx.SetCookie("Authorization"+roleUser, token, int((time.Hour * 1).Seconds()), "", "", false, true)
+		ctx.HTML(200, "Razorpay.html", gin.H{
+			"Token": token,
+		})
+	})
+	r.POST("/payment/submit", controllers.CreatePayment)
+
+	//Invoice
+	r.POST("/invoice/:ID", middleware.AuthMiddleware(roleUser), controllers.InvoicePDF)
 }

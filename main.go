@@ -13,6 +13,7 @@ func init() {
 
 func main() {
 	r := gin.Default()
+	r.LoadHTMLGlob("templates/*")
 
 	user := r.Group("/")
 	routes.UserGroup(user)

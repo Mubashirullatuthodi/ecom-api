@@ -38,4 +38,10 @@ func AdminGroup(r *gin.RouterGroup) {
 	r.GET("/admin/orderdetails",middleware.AuthMiddleware(RoleAdmin),controllers.GetOrderDetails)
 	r.POST("/admin/order/:ID",middleware.AuthMiddleware(RoleAdmin),controllers.ChangeOrderStatus)
 	r.POST("/admin/cancelorder",middleware.AuthMiddleware(RoleAdmin),controllers.CancelOrder)
+
+	//Coupon 
+	r.GET("/admin/coupons",middleware.AuthMiddleware(RoleAdmin),controllers.ListCoupon)
+	r.POST("/admin/coupons",middleware.AuthMiddleware(RoleAdmin),controllers.CreateCoupon)
+	r.DELETE("/admin/coupons",middleware.AuthMiddleware(RoleAdmin),controllers.DeleteCoupon)
+
 }

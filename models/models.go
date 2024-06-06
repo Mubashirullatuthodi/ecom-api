@@ -79,6 +79,7 @@ type Order struct {
 	TotalAmount   float64
 	PaymentMethod string
 	AddressID     uint
+	CouponCode    string
 	Address       Address
 	OrderDate     time.Time
 	OrderStatus   string `json:"orderstatus" gorm:"default:Pending"`
@@ -92,4 +93,37 @@ type OrderItems struct {
 	Product   Product
 	Quantity  int
 	SubTotal  float64
+}
+
+type WishList struct {
+	ID        uint
+	ProductID uint
+	UserID    uint
+	User      User
+	Product   Product
+}
+
+type Coupons struct {
+	gorm.Model
+	Discount    float64   `json:"discount"`
+	Code        string    `gorm:"unique" json:"code"`
+	Description string    `json:"description"`
+	Start_Date  time.Time `json:"start_date"`
+	Expiry_date time.Time `json:"expiry_date"`
+}
+
+type Payment struct {
+	gorm.Model
+	PaymentID string
+	OrderID         string 
+	Receipt         string //razor_id
+	PaymentStatus   string
+	PaymentAmount int
+}
+
+type Wallet struct {
+	gorm.Model
+	Balance float64
+	UserID  uint
+	User    User
 }

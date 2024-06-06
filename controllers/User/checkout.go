@@ -49,6 +49,7 @@ func PlaceOrder(ctx *gin.Context) {
 	var checkout struct {
 		Address_id   uint   `json:"address_id"`
 		Payment_type string `json:"payment_type"`
+		CouponCode   string `json:"coupon_code"`
 	}
 	if err := ctx.ShouldBind(&checkout); err != nil {
 		ctx.JSON(400, gin.H{
@@ -82,11 +83,88 @@ func PlaceOrder(ctx *gin.Context) {
 
 	fmt.Println("total=====================", Total)
 
+	//checking coupon
+	var couponcheck models.Coupons
+
+	if checkout.CouponCode != "" {
+		if err := initializers.DB.Where("code=?", checkout.CouponCode).First(&couponcheck).Error; err != nil {
+			fmt.Println("coupon code-------------->", couponcheck.Code)
+			ctx.JSON(401, gin.H{
+				"Error": "Invalid Coupon",
+			})
+			return
+		}
+		fmt.Println("before minus discount-------------------->", sum)
+		sum -= couponcheck.Discount
+		fmt.Println("after minus discount------------------>", sum)
+	}
+
+	//adrress checking
+	var adrress models.Address
+	if err := initializers.DB.Where("user_id = ? AND id = ?", userid, checkout.Address_id).First(&adrress).Error; err != nil {
+		ctx.JSON(401, gin.H{
+			"error": "Address not found",
+		})
+		return
+	}
+
 	orderCode := GenerateOrderID(10)
 
+	//transaction
+	tx := initializers.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	//method checking
+	if checkout.Payment_type == "COD" {
+		if sum < 1000 {
+			ctx.JSON(401, gin.H{
+				"Error": "COD not available below 1000 rs",
+			})
+			return
+		}
+	}
+
+	//payment gateway
+	fmt.Println("orderid------------------->", orderCode, "grand total------------->", sum)
+	if checkout.Payment_type == "UPI" {
+		orderPaymentID, err := PaymentSubmission(orderCode, sum)
+		if err != nil {
+			ctx.JSON(401, gin.H{
+				"error": err,
+			})
+			tx.Rollback()
+			return
+		}
+		ctx.JSON(200, gin.H{
+			"message":   "Continue to payment",
+			"paymentID": orderPaymentID,
+			"status":    200,
+		})
+		fmt.Println("paymentid-------------------->", orderPaymentID)
+		fmt.Println("receipt-------------------->", orderCode)
+		if err := tx.Create(&models.Payment{
+			OrderID:       orderPaymentID,
+			Receipt:       orderCode,
+			PaymentStatus: "not done",
+			PaymentAmount: int(sum),
+		}); err.Error != nil {
+			ctx.JSON(401, gin.H{
+				"Error": "Failed to upload payment",
+			})
+			fmt.Println("failed to upload payment details: ", err.Error)
+			tx.Rollback()
+		}
+	}
+
+	//order tables
 	order := models.Order{
 		OrderCode:     orderCode,
 		UserId:        userid,
+		CouponCode:    checkout.CouponCode,
 		PaymentMethod: checkout.Payment_type,
 		AddressID:     checkout.Address_id,
 		TotalQuantity: Quantity,
@@ -94,7 +172,13 @@ func PlaceOrder(ctx *gin.Context) {
 		OrderDate:     time.Now(),
 	}
 
-	initializers.DB.Create(&order)
+	if err := tx.Create(&order); err.Error != nil {
+		tx.Rollback()
+		ctx.JSON(401, gin.H{
+			"error": "Failed to place order",
+		})
+		return
+	}
 
 	for _, v := range cart {
 		orderitems := models.OrderItems{
@@ -103,42 +187,47 @@ func PlaceOrder(ctx *gin.Context) {
 			Quantity:  int(v.Quantity),
 			SubTotal:  v.Product.Price * float64(v.Quantity),
 		}
-		initializers.DB.Create(&orderitems)
-	}
-
-	/////////////////////////////////////
-	//var newProductQuantity string
-	for _, p := range cart {
-		fmt.Println("product Quantity====================", p.Product.Quantity)
-		var products models.Product
-		if err := initializers.DB.First(&products, p.Product_ID).Error; err != nil {
-			ctx.JSON(400, gin.H{
-				"error": "Product not found",
+		if err := tx.Create(&orderitems); err.Error != nil {
+			tx.Rollback()
+			ctx.JSON(401, gin.H{
+				"error": "Failed place order",
 			})
+			fmt.Println("failed to place order items: ", err.Error)
 			return
 		}
 
-		fmt.Println("Product Quantity Before:", products.Quantity)
-		qty, _ := strconv.ParseUint(products.Quantity, 10, 32)
-
-		newQuantity := uint64(qty) - uint64(p.Quantity)
-		finalQuantity := strconv.FormatFloat(float64(newQuantity), 'f', -1, 64)
-		fmt.Println("final===============================", finalQuantity)
-		products.Quantity = finalQuantity
-
-		if err := initializers.DB.Save(&products).Error; err != nil {
-			ctx.JSON(500, gin.H{"error": "Could not update product quantity"})
-			return
+		//stck managing
+		convert, _ := strconv.ParseUint(v.Product.Quantity, 10, 32)
+		convert -= uint64(v.Quantity)
+		v.Product.Quantity = fmt.Sprint(convert)
+		if err:=initializers.DB.Save(&v.Product);err.Error!=nil{
+			ctx.JSON(401,gin.H{
+				"error":"failed to update product stock",
+			})
 		}
-		fmt.Println("Product Quantity After:", products.Quantity)
 	}
 
-	initializers.DB.Delete(&cart)
+	if err := initializers.DB.Where("user_id=?", userid).Delete(&models.Cart{}); err.Error != nil {
+		ctx.JSON(401, gin.H{
+			"errror": "Failed to delete order",
+		})
+		return
+	}
 
-	ctx.JSON(200, gin.H{
-		"status":  "success",
-		"message": "ordered successfullly",
-	})
+	if err := tx.Commit(); err.Error != nil {
+		tx.Rollback()
+		ctx.JSON(401, gin.H{
+			"error": "Failed to commit transaction",
+		})
+		return
+	}
+	if checkout.Payment_type != "UPI" {
+		ctx.JSON(200, gin.H{
+			"message":     "Order placed successfully",
+			"Grand total": sum,
+			"status":      200,
+		})
+	}
 
 }
 

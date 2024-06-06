@@ -139,6 +139,8 @@ func ListCart(ctx *gin.Context) {
 		}
 		List = append(List, list)
 	}
+	token, _ := ctx.Get("token")
+	fmt.Println("jwt----------------------------", token)
 	//fmt.Println("=======================", List)
 
 	ctx.JSON(200, gin.H{

@@ -118,6 +118,7 @@ func SearchProduct(ctx *gin.Context) {
 			})
 		}
 		fmt.Println("=============================", prices)
+
 	}
 
 	ctx.JSON(200, prices)
