@@ -119,6 +119,29 @@ func SearchProduct(ctx *gin.Context) {
 		}
 		fmt.Println("=============================", prices)
 
+	case "popularity":
+		var products []models.Product
+		query := `SELECT *FROM products
+		JOIN ( 
+		SELECT product_id,SUM(quantity) as total_quantity
+		FROM order_items
+		GROUP BY product_id
+		ORDER BY total_quantity DESC
+		LIMIT 10)
+		AS o ON products.id = o.product_id
+		WHERE products.deleted_at IS NULL
+		ORDER BY o.total_quantity DESC`
+		initializers.DB.Raw(query).Scan(&products)
+
+		for _, v := range products {
+			prices = append(prices, gin.H{
+				"name":     v.Name,
+				"Price":    v.Price,
+				"category": v.Category.Name,
+				"ID":       v.ID,
+			})
+		}
+
 	}
 
 	ctx.JSON(200, prices)

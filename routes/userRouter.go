@@ -35,7 +35,8 @@ func UserGroup(r *gin.RouterGroup) {
 
 	//orders
 	r.GET("/user/profile/orders", middleware.AuthMiddleware(roleUser), controllers.OrderDetails)
-	r.POST("/user/profile/orders", middleware.AuthMiddleware(roleUser), controllers.CancelOrder)
+	r.POST("/user/profile/orderscancel", middleware.AuthMiddleware(roleUser), controllers.CancelOrder)
+	r.POST("/user/profile/ordercancelsingle", middleware.AuthMiddleware(roleUser), controllers.CancelSingleProduct)
 
 	//forgotPassword
 	r.POST("/user/profile/forgotpassword", middleware.AuthMiddleware(roleUser), controllers.ProfileForgotPassword)
@@ -70,5 +71,5 @@ func UserGroup(r *gin.RouterGroup) {
 	r.POST("/payment/submit", controllers.CreatePayment)
 
 	//Invoice
-	r.POST("/invoice/:ID", middleware.AuthMiddleware(roleUser), controllers.InvoicePDF)
+	//r.POST("/invoice/:ID", middleware.AuthMiddleware(roleUser), controllers.InvoicePDF)
 }

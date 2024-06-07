@@ -87,12 +87,13 @@ type Order struct {
 
 type OrderItems struct {
 	gorm.Model
-	OrderID   uint
-	Order     Order
-	ProductID uint
-	Product   Product
-	Quantity  int
-	SubTotal  float64
+	OrderID            uint
+	Order              Order
+	ProductID          uint
+	Product            Product
+	Quantity           int
+	SubTotal           float64
+	ProductOrderStatus string `json:"product_order_status" gorm:"default:Pending"`
 }
 
 type WishList struct {
@@ -114,10 +115,10 @@ type Coupons struct {
 
 type Payment struct {
 	gorm.Model
-	PaymentID string
-	OrderID         string 
-	Receipt         string //razor_id
-	PaymentStatus   string
+	PaymentID     string
+	OrderID       string
+	Receipt       string //razor_id
+	PaymentStatus string
 	PaymentAmount int
 }
 
