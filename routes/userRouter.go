@@ -70,6 +70,5 @@ func UserGroup(r *gin.RouterGroup) {
 	})
 	r.POST("/payment/submit", controllers.CreatePayment)
 
-	//Invoice
-	//r.POST("/invoice/:ID", middleware.AuthMiddleware(roleUser), controllers.InvoicePDF)
+	r.GET("/user/wallet",middleware.AuthMiddleware(roleUser),controllers.GetWallet)
 }

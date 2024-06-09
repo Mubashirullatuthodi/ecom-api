@@ -15,6 +15,7 @@ func ProductPage(ctx *gin.Context) {
 		ID    int
 		Name  string
 		Price float64
+		Stock string
 	}
 
 	var List []productlist
@@ -33,6 +34,7 @@ func ProductPage(ctx *gin.Context) {
 			ID:    int(value.ID),
 			Name:  value.Name,
 			Price: value.Price,
+			Stock: value.Quantity,
 		}
 		List = append(List, list)
 	}

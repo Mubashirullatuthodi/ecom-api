@@ -86,8 +86,11 @@ func PlaceOrder(ctx *gin.Context) {
 	//checking coupon
 	var couponcheck models.Coupons
 
+
+
 	if checkout.CouponCode != "" {
 		if err := initializers.DB.Where("code=?", checkout.CouponCode).First(&couponcheck).Error; err != nil {
+
 			fmt.Println("coupon code-------------->", couponcheck.Code)
 			ctx.JSON(401, gin.H{
 				"Error": "Invalid Coupon",
@@ -97,7 +100,7 @@ func PlaceOrder(ctx *gin.Context) {
 		fmt.Println("before minus discount-------------------->", sum)
 		sum -= couponcheck.Discount
 		fmt.Println("after minus discount------------------>", sum)
-	}
+	} 
 
 	//adrress checking
 	var adrress models.Address
@@ -200,9 +203,9 @@ func PlaceOrder(ctx *gin.Context) {
 		convert, _ := strconv.ParseUint(v.Product.Quantity, 10, 32)
 		convert -= uint64(v.Quantity)
 		v.Product.Quantity = fmt.Sprint(convert)
-		if err:=initializers.DB.Save(&v.Product);err.Error!=nil{
-			ctx.JSON(401,gin.H{
-				"error":"failed to update product stock",
+		if err := initializers.DB.Save(&v.Product); err.Error != nil {
+			ctx.JSON(401, gin.H{
+				"error": "failed to update product stock",
 			})
 		}
 	}

@@ -60,7 +60,6 @@ func CreatePayment(ctx *gin.Context) {
 	var Payment models.Payment
 	if err := ctx.ShouldBindJSON(&Paymentdetails); err != nil {
 		ctx.JSON(500, gin.H{"Error": "Invalid Request"})
-		fmt.Println("Invalid Request", err)
 	}
 	fmt.Println("====>", Paymentdetails)
 	err := RazorPaymentVerification(Paymentdetails["signatureID"], Paymentdetails["order_Id"], Paymentdetails["paymentID"])
@@ -72,7 +71,6 @@ func CreatePayment(ctx *gin.Context) {
 	fmt.Println("======", Paymentdetails["order_Id"])
 	if err := initializers.DB.Where("order_id = ?", Paymentdetails["order_Id"]).First(&Payment); err.Error != nil {
 		ctx.JSON(500, gin.H{"Error": "OrderID not found"})
-		fmt.Println("OrderID not found====>", err.Error)
 		return
 	}
 	fmt.Println("-------", Payment)
@@ -83,9 +81,7 @@ func CreatePayment(ctx *gin.Context) {
 		PaymentStatus: Payment.PaymentStatus,
 	}); err.Error != nil {
 		ctx.JSON(500, gin.H{"Error": "Failed to update paymentID"})
-		fmt.Println("Failed to update paymentID=======>", err.Error)
 	} else {
 		ctx.JSON(200, gin.H{"Message": "Payment Done"})
-		fmt.Println("Payment Done")
 	}
 }

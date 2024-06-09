@@ -43,7 +43,6 @@ func ListCoupon(ctx *gin.Context) {
 		return
 	}
 	type show struct {
-		ID          uint
 		Code        string
 		Discount    float64
 		Start_Date  string
@@ -57,7 +56,6 @@ func ListCoupon(ctx *gin.Context) {
 		startdate := v.Start_Date.Format("2006-01-02 15:04:05")
 		enddate := v.Expiry_date.Format("2006-01-02 15:04:05")
 		List := show{
-			ID:          v.ID,
 			Code:        v.Code,
 			Discount:    v.Discount,
 			Start_Date:  startdate,

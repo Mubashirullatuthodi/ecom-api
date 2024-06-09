@@ -78,8 +78,10 @@ type Order struct {
 	TotalQuantity int
 	TotalAmount   float64
 	PaymentMethod string
+	// Payment       Payment
 	AddressID     uint
-	CouponCode    string
+	CouponCode    string  `gorm:"default:NULL"`
+	Coupons       Coupons `gorm:"foreignKey:CouponCode;references:Code"`
 	Address       Address
 	OrderDate     time.Time
 	OrderStatus   string `json:"orderstatus" gorm:"default:Pending"`
@@ -105,9 +107,8 @@ type WishList struct {
 }
 
 type Coupons struct {
-	gorm.Model
 	Discount    float64   `json:"discount"`
-	Code        string    `gorm:"unique" json:"code"`
+	Code        string    `gorm:"primaryKey" json:"code"`
 	Description string    `json:"description"`
 	Start_Date  time.Time `json:"start_date"`
 	Expiry_date time.Time `json:"expiry_date"`
