@@ -7,43 +7,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	controllers "github.com/mubashir/e-commerce/controllers/Admin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
 )
-
-func CheckoutCart(ctx *gin.Context) {
-	var carts []models.Cart
-	userid := ctx.GetUint("userid")
-
-	initializers.DB.Where("user_id", userid).First(&carts)
-
-	if err := initializers.DB.Preload("User").Preload("Product").Find(&carts).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"error": "Failed to Fetch Items",
-		})
-		return
-	}
-
-	var Total []float64
-
-	for _, v := range carts {
-		fmt.Println("================", v.Product.Price)
-		fmt.Println("================", v.Quantity)
-		Total = append(Total, v.Product.Price*float64(v.Quantity))
-	}
-	fmt.Println("total===============", Total)
-
-	var result float64
-	for _, value := range Total {
-		result += value
-	}
-	fmt.Println("sum===================", result)
-
-	ctx.JSON(200, gin.H{
-		"status":       "success",
-		"total amount": fmt.Sprintf("%.2f rs", result),
-	})
-}
 
 func PlaceOrder(ctx *gin.Context) {
 	var checkout struct {
@@ -64,19 +31,19 @@ func PlaceOrder(ctx *gin.Context) {
 	initializers.DB.Preload("Product").Where("user_id", userid).Find(&cart)
 
 	//appending the amount of each product with the multiple of quantity
-	var Total []float64
+	var Total []int
 	var Quantity int
+	var discount float64
 
 	for _, v := range cart {
+		discount = controllers.OfferCalc(v.Product_ID)
+		quantityPrice := (float64(v.Quantity) * v.Product.Price) - (float64(v.Quantity) * discount)
 		Quantity += int(v.Quantity)
-		fmt.Println("================", v.Product.Price)
-		fmt.Println("================", v.Quantity)
-		Total = append(Total, v.Product.Price*float64(v.Quantity))
+		Total = append(Total, int(quantityPrice))
 	}
 
 	//total of carts amount
-	sum := 0.0
-
+	sum := 0
 	for _, v := range Total {
 		sum += v
 	}
@@ -84,23 +51,54 @@ func PlaceOrder(ctx *gin.Context) {
 	fmt.Println("total=====================", Total)
 
 	//checking coupon
+	useridforcoupon := ctx.GetUint("userid")
 	var couponcheck models.Coupons
-
-
+	totalWithoutDiscount := sum
+	//coupondiscount global
+	var coupDisc float64 = 0
 
 	if checkout.CouponCode != "" {
-		if err := initializers.DB.Where("code=?", checkout.CouponCode).First(&couponcheck).Error; err != nil {
+		//find coupon as valid or not
+		if err := initializers.DB.Where("coupon_code=?", checkout.CouponCode).First(&couponcheck).Error; err != nil {
 
-			fmt.Println("coupon code-------------->", couponcheck.Code)
+			fmt.Println("coupon code-------------->", couponcheck.CouponCode)
 			ctx.JSON(401, gin.H{
 				"Error": "Invalid Coupon",
 			})
 			return
 		}
+		//find the total above the condition
+		if totalWithoutDiscount < couponcheck.Condition {
+			sum = totalWithoutDiscount
+			ctx.JSON(401, gin.H{
+				"Error":                "Total amount is below 8000. Coupon cannot be used.",
+				"TotalWithoutDiscount": totalWithoutDiscount,
+			})
+			return
+		}
+
+		//check the coupon in the database
+		var usageCount int64
+		initializers.DB.Model(&models.CouponUsage{}).Where("user_id=? AND coupon_id=?", useridforcoupon, couponcheck.ID).Count(&usageCount)
+		if usageCount > 0 {
+			ctx.JSON(401, gin.H{
+				"Error": "You have already used this coupon",
+			})
+			return
+		}
+
+		//log coupon usage
+		CouponUsage := models.CouponUsage{
+			UserID:   useridforcoupon,
+			CouponID: couponcheck.ID,
+		}
+		initializers.DB.Create(&CouponUsage)
+
 		fmt.Println("before minus discount-------------------->", sum)
-		sum -= couponcheck.Discount
+		sum -= int(couponcheck.Discount)
+		coupDisc = couponcheck.Discount
 		fmt.Println("after minus discount------------------>", sum)
-	} 
+	}
 
 	//adrress checking
 	var adrress models.Address
@@ -123,9 +121,9 @@ func PlaceOrder(ctx *gin.Context) {
 
 	//method checking
 	if checkout.Payment_type == "COD" {
-		if sum < 1000 {
+		if sum > 1000 {
 			ctx.JSON(401, gin.H{
-				"Error": "COD not available below 1000 rs",
+				"Error": "COD not available above 1000 rs",
 			})
 			return
 		}
@@ -150,7 +148,7 @@ func PlaceOrder(ctx *gin.Context) {
 		fmt.Println("paymentid-------------------->", orderPaymentID)
 		fmt.Println("receipt-------------------->", orderCode)
 		if err := tx.Create(&models.Payment{
-			OrderID:       orderPaymentID,
+			OrdID:         orderPaymentID,
 			Receipt:       orderCode,
 			PaymentStatus: "not done",
 			PaymentAmount: int(sum),
@@ -162,17 +160,16 @@ func PlaceOrder(ctx *gin.Context) {
 			tx.Rollback()
 		}
 	}
-
 	//order tables
 	order := models.Order{
-		OrderCode:     orderCode,
-		UserId:        userid,
-		CouponCode:    checkout.CouponCode,
-		PaymentMethod: checkout.Payment_type,
-		AddressID:     checkout.Address_id,
-		TotalQuantity: Quantity,
-		TotalAmount:   sum,
-		OrderDate:     time.Now(),
+		OrderCode:      orderCode,
+		UserId:         userid,
+		CouponCode:     checkout.CouponCode,
+		PaymentMethod:  checkout.Payment_type,
+		AddressID:      checkout.Address_id,
+		TotalQuantity:  Quantity,
+		OrderAmount:    float64(sum),
+		CouponDiscount: int(coupDisc),
 	}
 
 	if err := tx.Create(&order); err.Error != nil {
@@ -185,10 +182,12 @@ func PlaceOrder(ctx *gin.Context) {
 
 	for _, v := range cart {
 		orderitems := models.OrderItems{
-			OrderID:   order.ID,
-			ProductID: v.Product_ID,
-			Quantity:  int(v.Quantity),
-			SubTotal:  v.Product.Price * float64(v.Quantity),
+			OrderID:         order.ID,
+			ProductID:       v.Product_ID,
+			Quantity:        int(v.Quantity),
+			SubTotal:        v.Product.Price * float64(v.Quantity),
+			OfferPercentage: int(discount),
+			//CouponDiscount:  int(coupDisc),
 		}
 		if err := tx.Create(&orderitems); err.Error != nil {
 			tx.Rollback()

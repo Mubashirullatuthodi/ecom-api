@@ -42,6 +42,7 @@ type Product struct {
 	Status      string         `json:"status"`
 	CategoryID  uint           `json:"category_id"`
 	Category    Category
+	Offer       Offer
 }
 
 type Category struct {
@@ -72,30 +73,29 @@ type Cart struct {
 
 type Order struct {
 	gorm.Model
-	OrderCode     string `gorm:"unique"`
-	UserId        uint
-	User          User
-	TotalQuantity int
-	TotalAmount   float64
-	PaymentMethod string
-	// Payment       Payment
-	AddressID     uint
-	CouponCode    string  `gorm:"default:NULL"`
-	Coupons       Coupons `gorm:"foreignKey:CouponCode;references:Code"`
-	Address       Address
-	OrderDate     time.Time
-	OrderStatus   string `json:"orderstatus" gorm:"default:Pending"`
+	OrderCode      string `gorm:"unique"`
+	UserId         uint
+	User           User
+	TotalQuantity  int
+	OrderAmount    float64
+	PaymentMethod  string
+	AddressID      uint
+	CouponCode     string
+	Address        Address
+	CouponDiscount int
 }
 
 type OrderItems struct {
 	gorm.Model
-	OrderID            uint
-	Order              Order
-	ProductID          uint
-	Product            Product
-	Quantity           int
-	SubTotal           float64
-	ProductOrderStatus string `json:"product_order_status" gorm:"default:Pending"`
+	OrderID         uint
+	Order           Order
+	ProductID       uint
+	Product         Product
+	Quantity        int
+	SubTotal        float64
+	OfferPercentage int
+	//CouponDiscount  int
+	OrderStatus     string `json:"product_order_status" gorm:"default:Pending"`
 }
 
 type WishList struct {
@@ -107,18 +107,27 @@ type WishList struct {
 }
 
 type Coupons struct {
+	gorm.Model
 	Discount    float64   `json:"discount"`
-	Code        string    `gorm:"primaryKey" json:"code"`
+	CouponCode  string    `gorm:"primaryKey" json:"couponcode"`
+	Condition   int       `json:"condition"`
 	Description string    `json:"description"`
+	MaxUsage    int       `json:"maxUsagePerUser"`
 	Start_Date  time.Time `json:"start_date"`
 	Expiry_date time.Time `json:"expiry_date"`
+}
+
+type CouponUsage struct {
+	gorm.Model
+	UserID   uint `gorm:"index"`
+	CouponID uint `gorm:"index"`
 }
 
 type Payment struct {
 	gorm.Model
 	PaymentID     string
-	OrderID       string
-	Receipt       string //razor_id
+	OrdID         string //razorid
+	Receipt       string
 	PaymentStatus string
 	PaymentAmount int
 }
@@ -128,4 +137,13 @@ type Wallet struct {
 	Balance float64
 	UserID  uint
 	User    User
+}
+
+type Offer struct {
+	gorm.Model
+	ProductID uint
+	OfferName string  `gorm:"unique" json:"offername"`
+	Discount  float64 `json:"discount"`
+	Created   time.Time
+	Expire    time.Time
 }

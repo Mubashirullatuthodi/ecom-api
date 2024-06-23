@@ -34,9 +34,8 @@ func UserGroup(r *gin.RouterGroup) {
 	r.POST("/user/profile/changepassword", middleware.AuthMiddleware(roleUser), controllers.ProfileChangePassword)
 
 	//orders
-	r.GET("/user/profile/orders", middleware.AuthMiddleware(roleUser), controllers.OrderDetails)
-	r.POST("/user/profile/orderscancel", middleware.AuthMiddleware(roleUser), controllers.CancelOrder)
-	r.POST("/user/profile/ordercancelsingle", middleware.AuthMiddleware(roleUser), controllers.CancelSingleProduct)
+	r.POST("/user/profile/orderscancel/:ID", middleware.AuthMiddleware(roleUser), controllers.CancelOrder)
+	//r.POST("/user/profile/ordercancelsingle", middleware.AuthMiddleware(roleUser), controllers.CancelSingleProduct)
 
 	//forgotPassword
 	r.POST("/user/profile/forgotpassword", middleware.AuthMiddleware(roleUser), controllers.ProfileForgotPassword)
@@ -52,8 +51,11 @@ func UserGroup(r *gin.RouterGroup) {
 	r.GET("/user/search", middleware.AuthMiddleware(roleUser), controllers.SearchProduct)
 
 	//checkout page
-	r.GET("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.CheckoutCart)
 	r.POST("/user/cartcheckout", middleware.AuthMiddleware(roleUser), controllers.PlaceOrder)
+
+	//vieworder
+	r.GET("/user/vieworder", middleware.AuthMiddleware(roleUser), controllers.ViewOrder)
+	r.GET("/user/orderdetails", middleware.AuthMiddleware(roleUser), controllers.OrderDetails)
 
 	//Wishlist
 	r.POST("/user/addwishlist/:ID", middleware.AuthMiddleware(roleUser), controllers.AddToWishlist)
@@ -63,12 +65,17 @@ func UserGroup(r *gin.RouterGroup) {
 	//payment
 	r.GET("/payment", func(ctx *gin.Context) {
 		token := ctx.GetString("token")
-		//ctx.SetCookie("Authorization"+roleUser, token, int((time.Hour * 1).Seconds()), "", "", false, true)
 		ctx.HTML(200, "Razorpay.html", gin.H{
 			"Token": token,
 		})
 	})
 	r.POST("/payment/submit", controllers.CreatePayment)
 
-	r.GET("/user/wallet",middleware.AuthMiddleware(roleUser),controllers.GetWallet)
+	//wallet
+	r.GET("/user/wallet", middleware.AuthMiddleware(roleUser), controllers.GetWallet)
+	r.GET("/user/wallethistory", middleware.AuthMiddleware(roleUser), controllers.WalletHistory)
+
+	//invoice
+	r.POST("/user/invoice/:ID", middleware.AuthMiddleware(roleUser), controllers.GenerateInvoice)
+
 }

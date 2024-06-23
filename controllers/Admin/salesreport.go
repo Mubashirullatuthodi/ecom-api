@@ -15,10 +15,11 @@ type ReportRequest struct {
 	OrderID         uint
 	CustomerName    string
 	ProductName     string
+	ProductQuantity int
 	OrderDate       string
 	TotalAmount     float64
 	CouponDeduction int
-	Discount        int
+	OfferDiscount   int
 	OrderStatus     string
 	PaymentMethod   string
 }
@@ -43,14 +44,11 @@ func SalesReport(ctx *gin.Context) {
 	if err := initializers.DB.
 		Preload("Order").
 		Preload("Product").
-		Preload("Order.Coupons").
 		Preload("Order.User").
 		Joins("JOIN orders ON order_items.order_id = orders.id").
 		Joins("JOIN products ON order_items.product_id = products.id").
 		Joins("JOIN users ON orders.user_id = users.id").
-		Joins("JOIN coupons ON orders.coupon_code = coupons.code").
-		Where("orders.order_status = ?", "Delivered").
-		Where("order_items.product_order_status = ?", "Pending").
+		Where("order_items.order_status = ?", "Delivered").
 		Where("order_items.deleted_at IS NULL").
 		Find(&sales).Error; err != nil {
 		ctx.JSON(400, gin.H{
@@ -69,6 +67,8 @@ func SalesReport(ctx *gin.Context) {
 
 	//apending
 	var newsales []ReportRequest
+	var overallSales float64
+	var overallDiscount float64
 
 	//var grandTotal float64
 	for _, details := range sales {
@@ -77,17 +77,17 @@ func SalesReport(ctx *gin.Context) {
 			OrderID:         details.OrderID,
 			CustomerName:    details.Order.User.FirstName,
 			ProductName:     details.Product.Name,
+			ProductQuantity: details.Quantity,
 			OrderDate:       formatDate,
-			TotalAmount:     details.Product.Price*float64(details.Quantity) - details.Order.Coupons.Discount,
-			OrderStatus:     details.Order.OrderStatus,
-			CouponDeduction: int(details.Order.Coupons.Discount),
+			TotalAmount:     details.Product.Price * float64(details.Quantity),
+			OrderStatus:     details.OrderStatus,
+			CouponDeduction: int(details.Order.CouponDiscount),
+			OfferDiscount:   details.OfferPercentage,
 			PaymentMethod:   details.Order.PaymentMethod,
 		}
-		// if details.Order.CouponCode != "" {
-		// 	new.CouponDeduction = int(details.Order.Coupons.Discount)
-		// }
 		newsales = append(newsales, new)
-		//grandTotal += details.Order.TotalAmount
+		overallSales += details.Product.Price * float64(details.Quantity)
+		overallDiscount = float64(details.OfferPercentage)*float64(details.Quantity) + float64(details.Order.CouponDiscount)
 	}
 
 	var recentSales []ReportRequest
@@ -103,6 +103,7 @@ func SalesReport(ctx *gin.Context) {
 	}
 
 	var grandTotal float64
+
 	for _, sale := range newsales {
 		orderTime, err := time.Parse("2006-01-02 15:04:05", sale.OrderDate)
 		if err != nil {
@@ -116,6 +117,7 @@ func SalesReport(ctx *gin.Context) {
 			recentSales = append(recentSales, sale)
 			grandTotal += sale.TotalAmount
 		}
+
 	}
 	if len(recentSales) == 0 {
 		ctx.JSON(200, gin.H{
@@ -125,14 +127,14 @@ func SalesReport(ctx *gin.Context) {
 		return
 	}
 
-	GeneratePDF(recentSales, grandTotal, ctx)
+	GeneratePDF(recentSales, grandTotal, overallSales, overallDiscount, ctx)
 }
 
-func GeneratePDF(newsales []ReportRequest, grandTotal float64, ctx *gin.Context) {
+func GeneratePDF(newsales []ReportRequest, grandTotal, overallSales, overallDiscount float64, ctx *gin.Context) {
 	//generate pdf
-	pdf := gofpdf.New("P", "mm", "A3", "")
+	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
-	pdf.SetFont("Arial", "B", 16)
+	pdf.SetFont("Arial", "B", 12)
 
 	//Title
 	pdf.Cell(40, 10, "Sales Report")
@@ -146,37 +148,61 @@ func GeneratePDF(newsales []ReportRequest, grandTotal float64, ctx *gin.Context)
 
 	pdf.SetX(margin)
 
-	columnWidth := []float64{20, 40, 40, 40, 30, 40, 40,30}
+	columnWidth := []float64{20, 30, 20, 40, 30, 35, 27}
 
 	pdf.CellFormat(columnWidth[0], 10, "Order ID", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(columnWidth[1], 10, "Customer Name", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(columnWidth[2], 10, "Product Name", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(columnWidth[1], 10, "Product Name", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(columnWidth[2], 10, "Quantity", "1", 0, "C", false, 0, "")
 	pdf.CellFormat(columnWidth[3], 10, "Order Date", "1", 0, "C", false, 0, "")
 	pdf.CellFormat(columnWidth[4], 10, "Total Amount", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(columnWidth[5], 10, "Coupon discount", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(columnWidth[6], 10, "Payment Method", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(columnWidth[7], 10, "Order Status", "1", 1, "C", false, 0, "")
+	pdf.CellFormat(columnWidth[5], 10, "Payment Method", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(columnWidth[6], 10, "Order Status", "1", 1, "C", false, 0, "")
 
 	//Table Body
 	pdf.SetFont("Arial", "", 12)
 	for _, sale := range newsales {
 		pdf.SetX(margin)
 		pdf.CellFormat(columnWidth[0], 10, strconv.Itoa(int(sale.OrderID)), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(columnWidth[1], 10, sale.CustomerName, "1", 0, "C", false, 0, "")
-		pdf.CellFormat(columnWidth[2], 10, sale.ProductName, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(columnWidth[1], 10, sale.ProductName, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(columnWidth[2], 10, fmt.Sprintf("%d", sale.ProductQuantity), "1", 0, "C", false, 0, "")
 		pdf.CellFormat(columnWidth[3], 10, sale.OrderDate, "1", 0, "C", false, 0, "")
 		pdf.CellFormat(columnWidth[4], 10, fmt.Sprintf("%.2f", sale.TotalAmount), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(columnWidth[5], 10, strconv.Itoa(sale.CouponDeduction), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(columnWidth[6], 10, sale.PaymentMethod, "1", 0, "C", false, 0, "")
-		pdf.CellFormat(columnWidth[7], 10, sale.OrderStatus, "1", 1, "C", false, 0, "")
+		pdf.CellFormat(columnWidth[5], 10, sale.PaymentMethod, "1", 0, "C", false, 0, "")
+		pdf.CellFormat(columnWidth[6], 10, sale.OrderStatus, "1", 1, "C", false, 0, "")
 	}
+
+	// total
+	pdf.SetFont("Arial", "B", 12)
+	pdf.SetX(margin)
+	pdf.CellFormat(columnWidth[0]+columnWidth[1]+columnWidth[2]+columnWidth[3]+columnWidth[4]+columnWidth[5], 10, "Total:", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(27, 10, fmt.Sprintf("%.2f", grandTotal), "1", 1, "C", false, 0, "")
+
+	//Discount
+	pdf.SetFont("Arial", "B", 12)
+	pdf.SetX(margin)
+	pdf.CellFormat(columnWidth[0]+columnWidth[1]+columnWidth[2]+columnWidth[3]+columnWidth[4]+columnWidth[5], 10, "Overall Discount:", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(27, 10, fmt.Sprintf("%.2f", overallDiscount), "1", 1, "C", false, 0, "")
 
 	//grand total
 	pdf.SetFont("Arial", "B", 12)
 	pdf.SetX(margin)
-	pdf.CellFormat(columnWidth[0]+columnWidth[1]+columnWidth[2]+columnWidth[3]+columnWidth[4]+columnWidth[5]+columnWidth[6], 10, "Grand Total", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(30, 10, fmt.Sprintf("%.2f", grandTotal), "1", 1, "C", false, 0, "")
-	//pdf.CellFormat(30, 10, "", "1", 1, "C", false, 0, "")
+	pdf.CellFormat(columnWidth[0]+columnWidth[1]+columnWidth[2]+columnWidth[3]+columnWidth[4]+columnWidth[5], 10, "Grand Total:", "1", 0, "L", false, 0, "")
+	pdf.CellFormat(27, 10, fmt.Sprintf("%.2f", overallSales-overallDiscount), "1", 1, "C", false, 0, "")
+
+	//overall sales,order amount
+	pdf.Ln(10)
+	pdf.SetX(margin)
+	pdf.Cell(40, 10, "Overall Sales Summary")
+	pdf.Ln(10)
+
+	pdf.SetFont("Arial", "", 12)
+	pdf.SetX(margin)
+	pdf.CellFormat(100, 10, "Overall Sales Amount:", "0", 0, "L", false, 0, "")
+	pdf.CellFormat(30, 10, fmt.Sprintf("%.2f", overallSales), "0", 1, "L", false, 0, "")
+
+	pdf.SetX(margin)
+	pdf.CellFormat(100, 10, "Overall Discount:", "0", 0, "L", false, 0, "")
+	pdf.CellFormat(30, 10, fmt.Sprintf("%.2f", overallDiscount), "0", 1, "L", false, 0, "")
 
 	//write pdf to file
 	err := pdf.OutputFileAndClose("sales_report.pdf")

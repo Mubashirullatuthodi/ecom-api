@@ -6,6 +6,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/joho/godotenv v1.5.1
+	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/jung-kurt/gofpdf/v2 v2.17.3
 	github.com/lib/pq v1.10.9
 	github.com/razorpay/razorpay-go v1.3.2

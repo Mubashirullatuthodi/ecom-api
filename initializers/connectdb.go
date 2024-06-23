@@ -11,18 +11,18 @@ import (
 
 var DB *gorm.DB
 
-func ConnectDB(){
-	DSN:=os.Getenv("DSN")
+func ConnectDB() {
+	DSN := os.Getenv("DSN")
 
 	var err error
 
 	dsn := DSN
 
-	DB,err=gorm.Open(postgres.Open(dsn),&gorm.Config{})
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
-	if err != nil{
+	if err != nil {
 		log.Fatal("error connecting to database")
 	}
 
-	DB.AutoMigrate(&models.User{},&models.Admin{},&models.OTP{},&models.Category{},&models.Product{},&models.Order{},&models.OrderItems{},&models.Address{},&models.Cart{},&models.WishList{},&models.Coupons{},&models.Payment{},&models.Wallet{})
+	DB.AutoMigrate(&models.User{}, &models.Admin{}, &models.OTP{}, &models.Category{}, &models.Product{}, &models.Order{}, &models.OrderItems{}, &models.Address{}, &models.Cart{}, &models.WishList{}, &models.Coupons{}, &models.Payment{}, &models.Wallet{}, &models.CouponUsage{}, &models.Offer{})
 }

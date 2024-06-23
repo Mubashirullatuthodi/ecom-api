@@ -25,7 +25,7 @@ func JwtToken(c *gin.Context, id uint, email string, role string) (string, error
 		Email: email,
 		Role:  role,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 2).Unix(),
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
 	}
 
@@ -45,7 +45,7 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
 		}
-		
+
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenstring, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(os.Getenv("SECRETKEY")), nil
@@ -62,7 +62,8 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 		}
 
 		c.Set("userid", claims.ID)
-		c.Set("token",tokenstring)
+		c.Set("token", tokenstring)
 		c.Next()
 	}
 }
+

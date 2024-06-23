@@ -2,29 +2,79 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	controllers "github.com/mubashir/e-commerce/controllers/Admin"
+
+	// "github.com/mubashir/e-commerce/controllers/User"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
 )
+
+func ViewOrder(ctx *gin.Context) {
+	var order []models.Order
+	var listOrder []gin.H
+	UserID := ctx.GetUint("userid")
+
+	if err := initializers.DB.Preload("User").Preload("Address").Where("user_id=?", UserID).Find(&order); err.Error != nil {
+		ctx.JSON(401, gin.H{
+			"error": "Failed to fetch order",
+		})
+		return
+	}
+
+	for _, v := range order {
+		var payment models.Payment
+		initializers.DB.Where("receipt=?", v.OrderCode).First(&payment)
+		fmt.Println("=================", payment.PaymentStatus)
+		formattime := v.CreatedAt.Format("2006-01-02 15:04:05")
+
+		offer := 0.0
+		GrandTotal := 0
+
+		var orders []models.OrderItems
+		initializers.DB.Where("order_id=?", v.ID).Find(&orders)
+		for _, d := range orders {
+			GrandTotal += int(d.SubTotal)
+			offer += controllers.OfferCalc(d.ProductID) * float64(d.Quantity)
+
+		}
+		listOrder = append(listOrder, gin.H{
+			"orderID":         v.ID,
+			"userID":          v.UserId,
+			"paymentMethod":   v.PaymentMethod,
+			"orderDate":       formattime,
+			"paymentStatus":   payment.PaymentStatus,
+			"paidAmount":      payment.PaymentAmount,
+			"offer_discount":  offer,
+			"Grand_total":     GrandTotal,
+			"Coupon_discount": v.CouponDiscount,
+		})
+	}
+	ctx.JSON(200, gin.H{
+		"data":   listOrder,
+		"status": 200,
+	})
+}
 
 func OrderDetails(ctx *gin.Context) {
 	var orders []models.OrderItems
 
 	type showOrders struct {
-		OrderID              uint
-		ProductID            uint
-		OrderCode            string
-		Product_name         string
-		Category_name        string
-		Product_Price        float64
-		TotalQuantity        int
-		TotalPrice           float64
-		Payment_Method       string
-		Order_Date           string
-		Order_Status         string
-		Order_Product_status string
+		OrderID       uint
+		ProductID     uint
+		OrderCode     string
+		Product_name  string
+		Product_Price float64
+		OrderQuantity int
+		TotalPrice    float64
+		//CouponDiscount     int //want to add
+		//TotalAfterDiscount int //want to add
+		Order_Date    string
+		Order_Status  string
+		OfferDiscount int
 	}
 
 	userid := ctx.GetUint("userid")
@@ -39,22 +89,27 @@ func OrderDetails(ctx *gin.Context) {
 	var List []showOrders
 
 	for _, v := range orders {
+		var coupon models.Coupons
+		initializers.DB.Where("coupon_code=?", v.Order.CouponCode).First(&coupon)
+
+		offer := controllers.OfferCalc(v.ProductID) * float64(v.Quantity)
+
 		//Format Date
-		formatdate := v.Order.OrderDate.Format("2006-01-02 15:04:05")
+		formatdate := v.Order.CreatedAt.Format("2006-01-02 15:04:05")
 
 		show := showOrders{
-			OrderID:              v.OrderID,
-			ProductID:            v.ProductID,
-			OrderCode:            v.Order.OrderCode,
-			Product_name:         v.Product.Name,
-			Product_Price:        v.Product.Price,
-			TotalQuantity:        v.Quantity,
-			TotalPrice:           v.SubTotal,
-			Payment_Method:       v.Order.PaymentMethod,
-			Category_name:        v.Product.Category.Name,
-			Order_Date:           formatdate,
-			Order_Status:         v.Order.OrderStatus,
-			Order_Product_status: v.ProductOrderStatus,
+			OrderID:       v.OrderID,
+			ProductID:     v.ProductID,
+			OrderCode:     v.Order.OrderCode,
+			Product_name:  v.Product.Name,
+			Product_Price: v.Product.Price,
+			OrderQuantity: v.Quantity,
+			TotalPrice:    v.SubTotal,
+			// CouponDiscount:     int(coupon.Discount),
+			// TotalAfterDiscount: int(v.Order.OrderAmount),
+			Order_Date:    formatdate,
+			Order_Status:  v.OrderStatus,
+			OfferDiscount: int(offer),
 		}
 		List = append(List, show)
 	}
@@ -66,150 +121,80 @@ func OrderDetails(ctx *gin.Context) {
 }
 
 func CancelOrder(ctx *gin.Context) {
-	ordercode := ctx.Request.FormValue("orderID")
 
-	if ordercode == "" {
-		ctx.JSON(400, gin.H{
-			"error": "Order code is required",
+	var orderitem models.OrderItems
+	//var wallet models.Wallet
+
+	orderID := ctx.Param("ID")
+	convorderid, _ := strconv.ParseUint(orderID, 10, 64)
+	productid := ctx.Request.FormValue("productid")
+	convproductid, _ := strconv.ParseUint(productid, 10, 64)
+	fmt.Println("converted product id: ", convproductid)
+	//finding product quantity
+	var product models.Product
+	if err := initializers.DB.First(&product, uint(convproductid)).Error; err != nil {
+		ctx.JSON(401, gin.H{
+			"error": "failed to fetch the product to return quantity",
 		})
 		return
 	}
 
-	var order models.Order
+	beforeCancellationQuantity, _ := strconv.Atoi(product.Quantity)
+	fmt.Println("before quantity------------------------------>", beforeCancellationQuantity)
 
-	if err := initializers.DB.Where("order_code=?", ordercode).First(&order).Error; err != nil {
-		ctx.JSON(404, gin.H{
-			"error": "Order not found",
+	if err := initializers.DB.Where("order_id=? AND product_id=?", uint(convorderid), uint(convproductid)).First(&orderitem); err.Error != nil {
+		ctx.JSON(401, gin.H{
+			"error":  "Order not Exist",
+			"status": 401,
 		})
-		return
-	}
-
-	if order.OrderStatus == "Cancelled" {
-		ctx.JSON(400, gin.H{
-			"error": "this order is already cancelled",
-		})
-		return
 	} else {
-
-		var orderItems []models.OrderItems
-
-		fmt.Println("orderid===============================", order.ID)
-
-		if err := initializers.DB.Where("order_id=?", order.ID).Find(&orderItems).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "failed to fetch order items",
+		if orderitem.OrderStatus == "Cancelled" {
+			ctx.JSON(200, gin.H{
+				"message": "Order aready Cancelled",
+				"status":  200,
 			})
 			return
 		}
-
-		//returning amount
-		var grandTotal float64
-
-		for _, item := range orderItems {
-			product := models.Product{}
-			if err := initializers.DB.Where("id=?", item.ProductID).First(&product).Error; err != nil {
-				ctx.JSON(500, gin.H{
-					"error": "failed to fetch products",
-				})
-				return
-			}
-
-			grandTotal += item.SubTotal
-
-			productQty, _ := strconv.ParseUint(product.Quantity, 10, 64)
-			productQty += uint64(item.Quantity)
-			product.Quantity = strconv.FormatUint(productQty, 10)
-			fmt.Println("result======================", productQty)
-
-			if err := initializers.DB.Save(&product).Error; err != nil {
-				ctx.JSON(500, gin.H{
-					"error": "failed to update product",
-				})
-				return
-			}
-		}
-
-		order.OrderStatus = "Cancelled"
-
-		if err := initializers.DB.Save(&order).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "Failed to cancel the order",
+		var order models.Order
+		if err := initializers.DB.Where("id=?", uint(convorderid)).First(&order).Error; err != nil {
+			ctx.JSON(400, gin.H{
+				"error": "failed to find order code!!",
 			})
-			return
 		}
 
-		userid := ctx.GetUint("userid")
+		var paymentid models.Payment
+		initializers.DB.Where("receipt=?", order.OrderCode).First(&paymentid)
 
-		wallet := models.Wallet{
-			Balance: grandTotal,
-			UserID:  userid,
-		}
+		cancelAmount := paymentid.PaymentAmount
+		fmt.Println("-------------------------->", cancelAmount)
+		fmt.Println("payedpaisa-------------------------->", paymentid.PaymentAmount)
 
-		if err := initializers.DB.Create(&wallet).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "failed to return cash to wallet",
+		if err := initializers.DB.Model(&orderitem).Updates(&models.OrderItems{
+			OrderStatus: "Cancelled",
+		}); err.Error != nil {
+			ctx.JSON(401, gin.H{
+				"error":  "order not cancelled",
+				"status": 401,
 			})
-			return
-		}
-
-		ctx.JSON(200, gin.H{
-			"status":  "success",
-			"message": "Order cancelled successfully",
-		})
-	}
-
-}
-
-type orderid struct {
-	OrderID   uint   `json:"order_id"`
-	ProductID uint   `json:"product_id"`
-	Status    string `json:"status"`
-}
-
-func CancelSingleProduct(ctx *gin.Context) {
-	var orderid orderid
-	var orderitems []models.OrderItems
-	userid := ctx.GetUint("userid")
-
-	if err := ctx.ShouldBindJSON(&orderid); err != nil {
-		ctx.JSON(404, gin.H{
-			"error": "Failed to Bind",
-		})
-		return
-	}
-	//handlig status
-	if orderid.Status != "Cancel" {
-		ctx.JSON(500, gin.H{
-			"error": "enter the status 'Cancel'",
-		})
-		return
-	}
-	if err := initializers.DB.Joins("Order").Where("order_items.order_id=?", orderid.OrderID).Find(&orderitems).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"error": "invalid order id",
-		})
-	}
-
-	for _, v := range orderitems {
-		fmt.Println("-----------", v.Order.UserId)
-		fmt.Println("-----------", v.ProductID)
-
-		if userid != v.Order.UserId && orderid.ProductID != v.ProductID {
-			ctx.JSON(500, gin.H{
-				"error": "invalid product",
-			})
-			return
 		} else {
-			if err := initializers.DB.Model(&orderitems).Where("product_id=?", orderid.ProductID).Update("product_order_status", orderid.Status).Error; err != nil {
-				ctx.JSON(500, gin.H{"error": "failed to update status"})
-				return
+			ctx.JSON(200, gin.H{
+				"message": "Order Cancelled Succesfully",
+			})
+			beforeCancellationQuantity += orderitem.Quantity
+			fmt.Println("after quantity--------------------->", beforeCancellationQuantity)
+			convQuantity := strconv.Itoa(beforeCancellationQuantity)
+
+			product.Quantity = convQuantity
+			if err := initializers.DB.Save(&product).Error; err != nil {
+				log.Fatalf("Failed to save product: %v", err)
 			}
+
+			userid := ctx.GetUint("userid")
+			initializers.DB.Create(&models.Wallet{
+				Balance: float64(cancelAmount),
+				UserID:  userid,
+			})
+
 		}
-
 	}
-
-	ctx.JSON(200, gin.H{
-		"status": "success",
-	})
-
 }

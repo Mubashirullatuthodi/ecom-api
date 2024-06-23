@@ -15,7 +15,7 @@ import (
 	"github.com/razorpay/razorpay-go"
 )
 
-func PaymentSubmission(orderid string, amount float64) (string, error) {
+func PaymentSubmission(orderid string, amount int) (string, error) {
 	fmt.Println("paymentorderID---------------------->", orderid, "paymentamount-------------->", amount)
 	keyid := os.Getenv("RAZORPAY_ID")
 	secretkey := os.Getenv("RAZORPAY_SECRET")
@@ -69,7 +69,7 @@ func CreatePayment(ctx *gin.Context) {
 	}
 
 	fmt.Println("======", Paymentdetails["order_Id"])
-	if err := initializers.DB.Where("order_id = ?", Paymentdetails["order_Id"]).First(&Payment); err.Error != nil {
+	if err := initializers.DB.Where("ord_id = ?", Paymentdetails["order_Id"]).First(&Payment); err.Error != nil {
 		ctx.JSON(500, gin.H{"Error": "OrderID not found"})
 		return
 	}

@@ -1,34 +1,63 @@
 package controllers
 
 import (
+	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
 )
 
+type newcoupon struct {
+	Code        string
+	Discount    float64
+	Condition   int
+	Description string
+	MaxUsage    int
+	Start_Date  string
+	Expiry_date string
+}
+
 func CreateCoupon(ctx *gin.Context) {
-	var coupon models.Coupons
+	var coupon newcoupon
 
-	if err := ctx.ShouldBind(&coupon); err != nil {
-		ctx.JSON(400, gin.H{
-			"error": "Failed to Bind",
-		})
+	if err := ctx.ShouldBindJSON(&coupon); err != nil {
+		ctx.JSON(500, "Failed to Bind")
 		return
 	}
 
-	if err := initializers.DB.Create(&coupon).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "Fail",
-			"Error":  "Coupon already exist",
-			"Code":   500,
-		})
+	startDate, err := time.Parse("2006-01-02", coupon.Start_Date)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid created date format"})
+		return
+	}
+	fmt.Println("----------------------------->", startDate)
+	endDate, err := time.Parse("2006-01-02", coupon.Expiry_date)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid created date format"})
 		return
 	}
 
-	ctx.JSON(200, gin.H{
-		"status":  "Success",
-		"message": "Added the coupon",
-	})
+	if err := initializers.DB.Create(&models.Coupons{
+		CouponCode:  coupon.Code,
+		Discount:    coupon.Discount,
+		Condition:   coupon.Condition,
+		Description: coupon.Description,
+		MaxUsage:    coupon.MaxUsage,
+		Start_Date:  startDate,
+		Expiry_date: endDate,
+	}); err.Error != nil {
+		ctx.JSON(401, gin.H{
+			"error":  "Coupon Already exist",
+			"status": 401,
+		})
+	} else {
+		ctx.JSON(200, gin.H{
+			"message": "New coupon added",
+		})
+	}
 }
 
 func ListCoupon(ctx *gin.Context) {
@@ -45,6 +74,9 @@ func ListCoupon(ctx *gin.Context) {
 	type show struct {
 		Code        string
 		Discount    float64
+		Condition   int
+		Description string
+		MaxUsage    int
 		Start_Date  string
 		Expiry_date string
 	}
@@ -56,8 +88,11 @@ func ListCoupon(ctx *gin.Context) {
 		startdate := v.Start_Date.Format("2006-01-02 15:04:05")
 		enddate := v.Expiry_date.Format("2006-01-02 15:04:05")
 		List := show{
-			Code:        v.Code,
+			Code:        v.CouponCode,
 			Discount:    v.Discount,
+			Condition:   v.Condition,
+			Description: v.Description,
+			MaxUsage:    v.MaxUsage,
 			Start_Date:  startdate,
 			Expiry_date: enddate,
 		}
@@ -71,5 +106,18 @@ func ListCoupon(ctx *gin.Context) {
 }
 
 func DeleteCoupon(ctx *gin.Context) {
+	var coupon models.Coupons
+	couponId := ctx.Param("ID")
+	if err := initializers.DB.Where("id=?", couponId).Delete(&coupon); err.Error != nil {
+		ctx.JSON(400, gin.H{
+			"error":  "coupon not found",
+			"status": 400,
+		})
+		return
+	}
 
+	ctx.JSON(204, gin.H{
+		"message": "Coupon Deleted",
+		"status":  204,
+	})
 }

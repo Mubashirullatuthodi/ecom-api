@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+    <select id="filter" onchange="fetchData()">
+        <option value="all">All</option>
+        <option value="yearly">Yearly</option>
+        <option value="monthly">Monthly</option>
+    </select>
+
+    <canvas id="orderChart"></canvas>
+
+    <script>
+        let orderChart;
+
+        async function fetchData() {
+            const filter = document.getElementById('filter').value;
+            const response = await fetch(`/orderanalyse?filter=${filter}`);
+            const orders = await response.json();
+
+            console.log("Fetched orders:", orders);
+
+            const ctx = document.getElementById('orderChart').getContext('2d');
+
+            // Destroy existing chart instance if it exists
+            if (orderChart) {
+                orderChart.destroy();
+            }
+
+            orderChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: orders.map(order => new Date(order.created_at).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Orders',
+                        data: orders.map(order => order.total_price),
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: filter === 'yearly' ? 'month' : 'day'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Total Price'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>

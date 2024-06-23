@@ -121,7 +121,10 @@ func ListCart(ctx *gin.Context) {
 
 	var List []Showcart
 
+	var Grandtotal int
+
 	for _, value := range listcart {
+
 		qty := strconv.FormatUint(uint64(value.Quantity), 10)
 		fmt.Println("============================", qty)
 		total := value.Product.Price * float64(value.Quantity)
@@ -138,14 +141,16 @@ func ListCart(ctx *gin.Context) {
 			Available_Quantity:  value.Product.Quantity,
 		}
 		List = append(List, list)
+		Grandtotal += int(total)
 	}
 	token, _ := ctx.Get("token")
 	fmt.Println("jwt----------------------------", token)
 	//fmt.Println("=======================", List)
 
 	ctx.JSON(200, gin.H{
-		"status":   "success",
-		"products": List,
+		"status":     "success",
+		"products":   List,
+		"GrandTotal": Grandtotal,
 	})
 }
 
