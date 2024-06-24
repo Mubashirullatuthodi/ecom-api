@@ -33,13 +33,15 @@ func ViewOrder(ctx *gin.Context) {
 
 		offer := 0.0
 		GrandTotal := 0
+		total := 0
 
 		var orders []models.OrderItems
 		initializers.DB.Where("order_id=?", v.ID).Find(&orders)
 		for _, d := range orders {
-			GrandTotal += int(d.SubTotal)
-			offer += controllers.OfferCalc(d.ProductID) * float64(d.Quantity)
 
+			offer += controllers.OfferCalc(d.ProductID) * float64(d.Quantity)
+			total += int(d.SubTotal)
+			GrandTotal = total - int(offer)
 		}
 		listOrder = append(listOrder, gin.H{
 			"orderID":         v.ID,
@@ -49,7 +51,7 @@ func ViewOrder(ctx *gin.Context) {
 			"paymentStatus":   payment.PaymentStatus,
 			"paidAmount":      payment.PaymentAmount,
 			"offer_discount":  offer,
-			"Grand_total":     GrandTotal,
+			"Grand_total":     GrandTotal-v.CouponDiscount,
 			"Coupon_discount": v.CouponDiscount,
 		})
 	}

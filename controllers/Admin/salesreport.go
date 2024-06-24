@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -205,13 +206,27 @@ func GeneratePDF(newsales []ReportRequest, grandTotal, overallSales, overallDisc
 	pdf.CellFormat(30, 10, fmt.Sprintf("%.2f", overallDiscount), "0", 1, "L", false, 0, "")
 
 	//write pdf to file
-	err := pdf.OutputFileAndClose("sales_report.pdf")
-	if err != nil {
-		ctx.JSON(500, gin.H{
-			"error": "Failed to Generate PDF",
+	// err := pdf.OutputFileAndClose("sales_report.pdf")
+	// if err != nil {
+	// 	ctx.JSON(500, gin.H{
+	// 		"error": "Failed to Generate PDF",
+	// 	})
+	// 	return
+	// }
+
+	path := fmt.Sprintf("C:/Users/shanm/Desktop/pdf/salesReport_%s_%s.pdf", time.Now().Format("20060102_150405"), "sales")
+	if err := pdf.OutputFileAndClose(path); err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"status":  "error",
+			"code":    401,
+			"message": "failed to generate pdf",
 		})
 		return
 	}
+
+	ctx.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment: filename=%s", path))
+	ctx.Writer.Header().Set("Content-Type", "application/pdf")
+	ctx.File(path)
 
 	//send PDF response
 	ctx.FileAttachment("sales_report.pdf", "sales_report.pdf")

@@ -62,8 +62,8 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 		}
 
 		c.Set("userid", claims.ID)
+		c.Set("email", claims.Email)
 		c.Set("token", tokenstring)
 		c.Next()
 	}
 }
-

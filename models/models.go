@@ -79,6 +79,7 @@ type Order struct {
 	TotalQuantity  int
 	OrderAmount    float64
 	PaymentMethod  string
+	ShippingCharge float64
 	AddressID      uint
 	CouponCode     string
 	Address        Address
@@ -95,7 +96,7 @@ type OrderItems struct {
 	SubTotal        float64
 	OfferPercentage int
 	//CouponDiscount  int
-	OrderStatus     string `json:"product_order_status" gorm:"default:Pending"`
+	OrderStatus string `json:"product_order_status" gorm:"default:Pending"`
 }
 
 type WishList struct {

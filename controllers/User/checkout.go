@@ -119,11 +119,27 @@ func PlaceOrder(ctx *gin.Context) {
 		}
 	}()
 
+	//check whether COD is done
+	if len(cart) == 0 {
+		ctx.JSON(400, gin.H{
+			"message": "already done the order",
+		})
+		return
+	}
+
+	//shiping charge
+	var shippingCharge float64
+	if sum < 15000 {
+		shippingCharge = 40
+		sum += int(shippingCharge)
+	}
+
 	//method checking
 	if checkout.Payment_type == "COD" {
-		if sum > 1000 {
+		if sum > 10000 {
 			ctx.JSON(401, gin.H{
-				"Error": "COD not available above 1000 rs",
+				"Error":       "COD not available above 10000 rs",
+				"totalAmount": sum,
 			})
 			return
 		}
@@ -168,6 +184,7 @@ func PlaceOrder(ctx *gin.Context) {
 		PaymentMethod:  checkout.Payment_type,
 		AddressID:      checkout.Address_id,
 		TotalQuantity:  Quantity,
+		ShippingCharge: shippingCharge,
 		OrderAmount:    float64(sum),
 		CouponDiscount: int(coupDisc),
 	}
@@ -187,7 +204,6 @@ func PlaceOrder(ctx *gin.Context) {
 			Quantity:        int(v.Quantity),
 			SubTotal:        v.Product.Price * float64(v.Quantity),
 			OfferPercentage: int(discount),
-			//CouponDiscount:  int(coupDisc),
 		}
 		if err := tx.Create(&orderitems); err.Error != nil {
 			tx.Rollback()
@@ -198,7 +214,7 @@ func PlaceOrder(ctx *gin.Context) {
 			return
 		}
 
-		//stck managing
+		//stock managing
 		convert, _ := strconv.ParseUint(v.Product.Quantity, 10, 32)
 		convert -= uint64(v.Quantity)
 		v.Product.Quantity = fmt.Sprint(convert)
@@ -225,9 +241,10 @@ func PlaceOrder(ctx *gin.Context) {
 	}
 	if checkout.Payment_type != "UPI" {
 		ctx.JSON(200, gin.H{
-			"message":     "Order placed successfully",
-			"Grand total": sum,
-			"status":      200,
+			"status":          "success",
+			"message":         "Order placed successfully",
+			"Grand total":     sum,
+			"shipping_Charge": shippingCharge,
 		})
 	}
 

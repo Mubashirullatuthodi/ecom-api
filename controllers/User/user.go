@@ -4,6 +4,7 @@ import (
 	//"crypto/rand"
 
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -427,4 +428,44 @@ func ResetPassword(ctx *gin.Context) {
 			"Message": "Password reset successfull",
 		})
 	}
+}
+
+func RefreshToken(ctx *gin.Context) {
+	returnObject := gin.H{
+		"status":  "OK",
+		"message": "Refresh Token route",
+	}
+
+	email, exists := ctx.Get("email")
+	if !exists {
+		log.Println("Email key not found")
+
+		returnObject["message"] = "Email not found."
+		ctx.JSON(401, returnObject)
+		return
+	}
+	var user models.User
+
+	initializers.DB.First(&user, "email=?", email)
+
+	if user.ID == 0 {
+		returnObject["message"] = "User not found"
+		ctx.JSON(400, returnObject)
+		return
+	}
+
+	token, err := middleware.JwtToken(ctx, user.ID, user.Email, RoleUser)
+
+	if err != nil {
+		returnObject["message"] = "Token Creation Error."
+		ctx.JSON(401, returnObject)
+		return
+	}
+
+	ctx.SetCookie("Authorization"+RoleUser,token, int((time.Hour * 1).Seconds()),"","",false,true)
+
+	returnObject["token"] = token
+	returnObject["user"] = user
+
+	ctx.JSON(200,returnObject)
 }

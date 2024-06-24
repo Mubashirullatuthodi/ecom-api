@@ -78,4 +78,6 @@ func UserGroup(r *gin.RouterGroup) {
 	//invoice
 	r.POST("/user/invoice/:ID", middleware.AuthMiddleware(roleUser), controllers.GenerateInvoice)
 
+	r.POST("/refresh-token", middleware.AuthMiddleware(roleUser), controllers.RefreshToken)
+
 }
