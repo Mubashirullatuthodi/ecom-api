@@ -98,7 +98,7 @@ func EditAddress(ctx *gin.Context) {
 		address.Address = editAddress.Address
 		address.District = editAddress.District
 		address.Pincode = editAddress.Pincode
-		address.State = editAddress.Town
+		address.State = editAddress.State
 		address.Town = editAddress.Town
 
 		if err := initializers.DB.Save(&address).Error; err != nil {

@@ -65,7 +65,7 @@ func GenerateInvoice(ctx *gin.Context) {
 			TotalPrice:      float64(item.Quantity) * item.Product.Price,
 		}
 		new = append(new, r)
-		ShippingAddress = fmt.Sprintf(item.Order.Address.Address + "\n" + item.Order.Address.District + "," + item.Order.Address.State + "," + item.Order.Address.Pincode)
+		ShippingAddress = fmt.Sprintf(item.Order.User.FirstName+"\n"+item.Order.Address.Address + "\n"+item.Order.Address.Town+"," + item.Order.Address.District + "," + item.Order.Address.Pincode + ",\n" + item.Order.Address.State+"\n+91 "+item.Order.User.Phone)
 		orderNumber = item.Order.OrderCode
 		orderDate = item.Order.CreatedAt.Format("2006-01-02")
 	}
@@ -89,7 +89,7 @@ func GeneratePDF(new []report, shippingAddress, orderNumber, OrderDate string, s
 	pdf.Ln(20)
 
 	//default
-	companyAddress := "From:\nE-Commerce\n1234 JP Nagar\nBangalore, Karnataka, 589625\nIndia"
+	companyAddress := "From:\nE-Commerce\necommerce@gmail.com\n1234 JP Nagar\nBangalore, Karnataka, 589625\nIndia"
 	//add address
 	pdf.SetFont("Arial", "", 16)
 	pdf.MultiCell(100, 10, companyAddress, "", "E", false)
@@ -102,14 +102,14 @@ func GeneratePDF(new []report, shippingAddress, orderNumber, OrderDate string, s
 	pdf.Ln(20)
 
 	//order number
-	pdf.SetFont("Arial", "", 14)
+	pdf.SetFont("Arial", "", 15)
 	pdf.MultiCell(100, 5, "Order Number:"+orderNumber, "", "L", false)
-	pdf.Ln(10)
+	pdf.Ln(5)
 
 	//order number
-	pdf.SetFont("Arial", "", 14)
+	pdf.SetFont("Arial", "", 15)
 	pdf.MultiCell(100, 5, "Order Date:"+OrderDate, "", "L", false)
-	pdf.Ln(10)
+	pdf.Ln(20)
 
 	//table header
 	pdf.SetFont("Arial", "B", 16)

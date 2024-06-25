@@ -43,7 +43,7 @@ func AdminGroup(r *gin.RouterGroup) {
 	//Coupon
 	r.GET("/admin/coupons", middleware.AuthMiddleware(RoleAdmin), controllers.ListCoupon)
 	r.POST("/admin/coupons", middleware.AuthMiddleware(RoleAdmin), controllers.CreateCoupon)
-	r.DELETE("/admin/coupons", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteCoupon)
+	r.DELETE("/admin/coupons/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.DeleteCoupon)
 
 	//Offer Modules
 	r.POST("/admin/offer", middleware.AuthMiddleware(RoleAdmin), controllers.CreateOffer)

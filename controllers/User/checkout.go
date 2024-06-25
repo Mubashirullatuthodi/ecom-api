@@ -71,8 +71,8 @@ func PlaceOrder(ctx *gin.Context) {
 		if totalWithoutDiscount < couponcheck.Condition {
 			sum = totalWithoutDiscount
 			ctx.JSON(401, gin.H{
-				"Error":                "Total amount is below 8000. Coupon cannot be used.",
-				"TotalWithoutDiscount": totalWithoutDiscount,
+				"Error":       fmt.Sprintf("total Amount needed %d to apply coupon", couponcheck.Condition),
+				"TotalAmount": totalWithoutDiscount,
 			})
 			return
 		}
