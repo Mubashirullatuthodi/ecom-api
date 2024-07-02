@@ -41,12 +41,12 @@ func ListAddress(ctx *gin.Context) {
 		return
 	}
 	type UserDetails struct {
-		Address_Id uint   `json:"address_id"`
-		FirstName  string `json:"firstname"`
-		LastName   string `json:"lastname"`
+		Address_Id uint   `json:"addressID"`
+		FirstName  string `json:"firstName"`
+		LastName   string `json:"lastName"`
 		//Email     string `json:"email"`
 		//Gender    string `json:"gender"`
-		Phone_No string `json:"phone_no"`
+		Phone_No string `json:"phoneNo"`
 		Address  string `json:"address"`
 		Town     string `json:"town"`
 		District string `json:"district"`
@@ -80,9 +80,9 @@ func ListAddress(ctx *gin.Context) {
 func ProfileChangePassword(ctx *gin.Context) {
 	userid := ctx.GetUint("userid")
 	var password struct {
-		CurrentPassword string `json:"current_password"`
-		NewPassword     string `json:"new_password"`
-		ConfirmPassword string `json:"confirm_password"`
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+		ConfirmPassword string `json:"confirmPassword"`
 	}
 
 	if err := ctx.BindJSON(&password); err != nil {
@@ -191,10 +191,10 @@ func EditProfile(ctx *gin.Context) {
 	var users models.User
 
 	var editprofile struct {
-		FirstName string `json:"firstname"`
+		FirstName string `json:"firstName"`
 		Gender    string `json:"gender"`
 		Email     string `json:"email"`
-		Phone_no  string `json:"phone_no"`
+		Phone_no  string `json:"phoneNo"`
 		Address   string `json:"address"`
 		Pincode   string `json:"pincode"`
 	}

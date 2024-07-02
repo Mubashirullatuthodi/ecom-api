@@ -11,8 +11,8 @@ import (
 
 func AddtoCart(ctx *gin.Context) {
 	var addcart struct {
-		Userid    uint `json:"user_id"`
-		Productid uint `json:"product_id"`
+		Userid    uint `json:"userID"`
+		Productid uint `json:"productID"`
 		Quantity  uint `json:"quantity"`
 	}
 
@@ -65,7 +65,7 @@ func AddtoCart(ctx *gin.Context) {
 		if err := initializers.DB.Save(&existingCart).Error; err != nil {
 			ctx.JSON(400, gin.H{
 				"status": "Fail",
-				"Error":  "Failede to update Cart",
+				"Error":  "Failed to update Cart",
 				"code":   400,
 			})
 			return
@@ -99,9 +99,9 @@ func AddtoCart(ctx *gin.Context) {
 }
 
 func ListCart(ctx *gin.Context) {
-	var listcart []models.Cart
+	var listCart []models.Cart
 
-	if err := initializers.DB.Preload("User").Preload("Product").Find(&listcart).Error; err != nil {
+	if err := initializers.DB.Preload("User").Preload("Product").Find(&listCart).Error; err != nil {
 		ctx.JSON(500, gin.H{
 			"error": "Failed to Fetch Items",
 		})
@@ -111,11 +111,11 @@ func ListCart(ctx *gin.Context) {
 	type Showcart struct {
 		CartId              uint   `json:"cartid"`
 		Userid              uint   `json:"userid"`
-		Product_name        string `json:"product_name"`
-		Product_image       string `json:"product_image"`
-		Product_description string `json:"product_description"`
+		ProductName        string `json:"productName"`
+		ProductImage       string `json:"productImage"`
+		ProductDescription string `json:"productDescription"`
 		Quantity            string `json:"quantity"`
-		Available_Quantity  string `json:"stock_available"`
+		AvailableQuantity  string `json:"stockAvailable"`
 		Price               string `json:"price"`
 	}
 
@@ -123,7 +123,7 @@ func ListCart(ctx *gin.Context) {
 
 	var Grandtotal int
 
-	for _, value := range listcart {
+	for _, value := range listCart {
 
 		qty := strconv.FormatUint(uint64(value.Quantity), 10)
 		fmt.Println("============================", qty)
@@ -133,12 +133,12 @@ func ListCart(ctx *gin.Context) {
 		list := Showcart{
 			CartId:              value.ID,
 			Userid:              value.User_ID,
-			Product_name:        value.Product.Name,
-			Product_image:       value.Product.ImagePath[0],
-			Product_description: value.Product.Description,
+			ProductName:        value.Product.Name,
+			ProductImage:       value.Product.ImagePath[0],
+			ProductDescription: value.Product.Description,
 			Price:               totalPrice,
 			Quantity:            qty,
-			Available_Quantity:  value.Product.Quantity,
+			AvailableQuantity:  value.Product.Quantity,
 		}
 		List = append(List, list)
 		Grandtotal += int(total)

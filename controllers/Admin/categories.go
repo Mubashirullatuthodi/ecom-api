@@ -42,7 +42,7 @@ func CreateCategory(ctx *gin.Context) {
 }
 
 func GetCategory(ctx *gin.Context) {
-	var listcategory []models.Category
+	var listCategory []models.Category
 
 	type List struct {
 		ID          int
@@ -52,14 +52,14 @@ func GetCategory(ctx *gin.Context) {
 
 	var list []List
 
-	if err := initializers.DB.Find(&listcategory).Error; err != nil {
+	if err := initializers.DB.Find(&listCategory).Error; err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to list category",
 		})
 		return
 	}
 
-	for _, value := range listcategory {
+	for _, value := range listCategory {
 		category := List{
 			ID:          int(value.ID),
 			Name:        value.Name,

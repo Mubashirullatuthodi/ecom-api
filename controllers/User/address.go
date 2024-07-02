@@ -70,7 +70,7 @@ func EditAddress(ctx *gin.Context) {
 	userID:=ctx.GetUint("userid")
 
 	var editAddress struct {
-		User_id  uint   `json:"user_id"`
+		UserID  uint   `json:"userID"`
 		Address  string `json:"address"`
 		Town     string `json:"town"`
 		District string `json:"district"`
@@ -118,7 +118,7 @@ func EditAddress(ctx *gin.Context) {
 }
 
 func DeleteAddress(ctx *gin.Context) {
-	user_id, exist := ctx.Get("userid")
+	userID, exist := ctx.Get("userid")
 	if !exist {
 		ctx.JSON(500, gin.H{
 			"error": "user_id not found",
@@ -126,7 +126,7 @@ func DeleteAddress(ctx *gin.Context) {
 		return
 	}
 
-	fmt.Println("user:======================", user_id)
+	fmt.Println("user:======================", userID)
 	var address models.Address
 
 	id := ctx.Param("ID")
@@ -140,7 +140,7 @@ func DeleteAddress(ctx *gin.Context) {
 	}
 
 	//soft delete
-	if user_id == address.User_ID {
+	if userID == address.User_ID {
 		initializers.DB.Delete(&address)
 
 		ctx.JSON(204, gin.H{

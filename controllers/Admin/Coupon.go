@@ -11,13 +11,13 @@ import (
 )
 
 type newcoupon struct {
-	Code        string
-	Discount    float64
-	Condition   int
-	Description string
-	MaxUsage    int
-	Start_Date  string
-	Expiry_date string
+	Code        string  `json:"code"`
+	Discount    float64 `json:"discount"`
+	Condition   int     `json:"condition"`
+	Description string  `json:"descrition"`
+	MaxUsage    int     `json:"maxUsage"`
+	Start_Date  string  `json:"startDate"`
+	Expiry_date string  `json:"expiryDate"`
 }
 
 func CreateCoupon(ctx *gin.Context) {
@@ -73,8 +73,8 @@ func ListCoupon(ctx *gin.Context) {
 	}
 	type show struct {
 		ID          uint
-		Code        string
-		Discount    float64
+		Code        string 
+		Discount    float64 
 		Condition   int
 		Description string
 		MaxUsage    int

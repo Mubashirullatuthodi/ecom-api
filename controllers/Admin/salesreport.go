@@ -26,9 +26,9 @@ type ReportRequest struct {
 }
 
 type Search struct {
-	Type      string    `json:"type"`
-	StartDate time.Time `json:"start_date"`
-	EndDate   time.Time `json:"end_date"`
+	Type string `json:"type"`
+	//StartDate time.Time `json:"startDate"`
+	//EndDate   time.Time `json:"endDate"`
 }
 
 func SalesReport(ctx *gin.Context) {
@@ -38,6 +38,19 @@ func SalesReport(ctx *gin.Context) {
 			"error": "Failed to bind",
 		})
 		return
+	}
+	//var start time.Time
+	//var end time.Time
+	var threshold time.Time
+
+	switch search.Type {
+	case "Daily":
+		threshold = time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Now().Location())
+
+	case "Weekly":
+		threshold = time.Now().AddDate(0, 0, -7)
+	case "Monthly":
+		threshold = time.Now().AddDate(0, -1, 0)
 	}
 
 	var sales []models.OrderItems
@@ -50,6 +63,7 @@ func SalesReport(ctx *gin.Context) {
 		Joins("JOIN products ON order_items.product_id = products.id").
 		Joins("JOIN users ON orders.user_id = users.id").
 		Where("order_items.order_status = ?", "Delivered").
+		Where("order_items.created_at BETWEEN ? AND ?", threshold, time.Now()).
 		Where("order_items.deleted_at IS NULL").
 		Find(&sales).Error; err != nil {
 		ctx.JSON(400, gin.H{
@@ -70,10 +84,16 @@ func SalesReport(ctx *gin.Context) {
 	var newsales []ReportRequest
 	var overallSales float64
 	var overallDiscount float64
+	var grandTotal float64
+	var formatDate string
 
 	//var grandTotal float64
 	for _, details := range sales {
-		formatDate := details.Order.CreatedAt.Format("2006-01-02 15:04:05")
+		if details.OrderStatus == "Delivered" {
+			grandTotal += details.Product.Price * float64(details.Quantity)
+			formatDate = details.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+
 		new := ReportRequest{
 			OrderID:         details.OrderID,
 			CustomerName:    details.Order.User.FirstName,
@@ -90,37 +110,7 @@ func SalesReport(ctx *gin.Context) {
 		overallSales += details.Product.Price * float64(details.Quantity)
 		overallDiscount = float64(details.OfferPercentage)*float64(details.Quantity) + float64(details.Order.CouponDiscount)
 	}
-
-	var recentSales []ReportRequest
-	threshold := time.Now()
-
-	switch search.Type {
-	case "Daily":
-		threshold = time.Now().Add(-24 * time.Hour)
-	case "Weekly":
-		threshold = time.Now().Add(-7 * 24 * time.Hour)
-	case "Monthly":
-		threshold = time.Now().Add(-30 * 24 * time.Hour)
-	}
-
-	var grandTotal float64
-
-	for _, sale := range newsales {
-		orderTime, err := time.Parse("2006-01-02 15:04:05", sale.OrderDate)
-		if err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "Failed to parse order date",
-			})
-			return
-		}
-
-		if orderTime.After(threshold) {
-			recentSales = append(recentSales, sale)
-			grandTotal += sale.TotalAmount
-		}
-
-	}
-	if len(recentSales) == 0 {
+	if len(newsales) == 0 {
 		ctx.JSON(200, gin.H{
 			"status": "success",
 			"Report": "No orders found in the specified period",
@@ -128,7 +118,7 @@ func SalesReport(ctx *gin.Context) {
 		return
 	}
 
-	GeneratePDF(recentSales, grandTotal, overallSales, overallDiscount, ctx)
+	GeneratePDF(newsales, grandTotal, overallSales, overallDiscount, ctx)
 }
 
 func GeneratePDF(newsales []ReportRequest, grandTotal, overallSales, overallDiscount float64, ctx *gin.Context) {
@@ -204,15 +194,6 @@ func GeneratePDF(newsales []ReportRequest, grandTotal, overallSales, overallDisc
 	pdf.SetX(margin)
 	pdf.CellFormat(100, 10, "Overall Discount:", "0", 0, "L", false, 0, "")
 	pdf.CellFormat(30, 10, fmt.Sprintf("%.2f", overallDiscount), "0", 1, "L", false, 0, "")
-
-	//write pdf to file
-	// err := pdf.OutputFileAndClose("sales_report.pdf")
-	// if err != nil {
-	// 	ctx.JSON(500, gin.H{
-	// 		"error": "Failed to Generate PDF",
-	// 	})
-	// 	return
-	// }
 
 	path := fmt.Sprintf("C:/Users/shanm/Desktop/pdf/salesReport_%s_%s.pdf", time.Now().Format("20060102_150405"), "sales")
 	if err := pdf.OutputFileAndClose(path); err != nil {

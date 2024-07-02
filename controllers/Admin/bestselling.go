@@ -11,11 +11,11 @@ import (
 
 func BestSelling(ctx *gin.Context) {
 	type BestProduct struct {
-		ProductID     uint    `json:"product_id"`
+		ProductID     uint    `json:"productId"`
 		Name          string  `json:"name"`
 		Description   string  `json:"description"`
 		Price         float64 `json:"price"`
-		TotalQuantity int     `json:"total_quantity"`
+		TotalQuantity int     `json:"totalQuantity"`
 	}
 
 	var bestProducts []BestProduct

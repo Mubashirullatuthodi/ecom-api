@@ -12,30 +12,30 @@ import (
 
 type addoffer struct {
 	ProductID uint    `json:"productID"`
-	OfferName string  `json:"offername"`
+	OfferName string  `json:"offerName"`
 	Discount  float64 `json:"discount"`
 	Created   string  `json:"created"`
 	Expire    string  `json:"expire"`
 }
 
 func CreateOffer(ctx *gin.Context) {
-	var addoffer addoffer
+	var addOffer addoffer
 	var product models.Product
-	ctx.ShouldBindJSON(&addoffer)
-	if err := initializers.DB.Where("id=?", addoffer.ProductID).First(&product); err.Error != nil {
+	ctx.ShouldBindJSON(&addOffer)
+	if err := initializers.DB.Where("id=?", addOffer.ProductID).First(&product); err.Error != nil {
 		ctx.JSON(401, gin.H{
 			"error":  "Product not available",
 			"status": 401,
 		})
 		return
 	}
-	startDate, _ := time.Parse("2006-01-02", addoffer.Created)
-	EndDate, _ := time.Parse("2006-01-02", addoffer.Expire)
+	startDate, _ := time.Parse("2006-01-02", addOffer.Created)
+	EndDate, _ := time.Parse("2006-01-02", addOffer.Expire)
 
 	if err := initializers.DB.Create(&models.Offer{
-		ProductID: addoffer.ProductID,
-		OfferName: addoffer.OfferName,
-		Discount:  addoffer.Discount,
+		ProductID: addOffer.ProductID,
+		OfferName: addOffer.OfferName,
+		Discount:  addOffer.Discount,
 		Created:   startDate,
 		Expire:    EndDate,
 	}); err.Error != nil {
@@ -79,24 +79,31 @@ func ListOffer(ctx *gin.Context) {
 
 func OfferCalc(productID uint) float64 {
 	var offerCheck models.Product
+	var offer models.Offer
+	if err := initializers.DB.Where("product_id=?", productID).First(&offer).Error; err != nil {
+		return 0
+	}
+	if time.Now().After(offer.Expire) {
+		return 0
+	}
 	var Discount float64 = 0
 	if err := initializers.DB.Joins("Offer").First(&offerCheck, "products.id = ?", productID); err.Error != nil {
 		return Discount
-	} else {
-		percentage := offerCheck.Offer.Discount
-		fmt.Println("%:  ", percentage)
-		ProductAmount := offerCheck.Price
-		fmt.Println("product amount: ", ProductAmount)
-		Discount = (percentage * float64(ProductAmount)) / 100
-		fmt.Println("discount: ", Discount)
 	}
+	percentage := offerCheck.Offer.Discount
+	fmt.Println("%:  ", percentage)
+	ProductAmount := offerCheck.Price
+	fmt.Println("product amount: ", ProductAmount)
+	Discount = (percentage * float64(ProductAmount)) / 100
+	fmt.Println("discount: ", Discount)
+
 	return Discount
 }
 
 func OfferApply(ctx *gin.Context) {
 	var offer models.Offer
-	offerid := ctx.Param("ID")
-	convID, _ := strconv.ParseUint(offerid, 32, 10)
+	offerID := ctx.Param("ID")
+	convID, _ := strconv.ParseUint(offerID, 32, 10)
 
 	if err := initializers.DB.Unscoped().First(&offer, "id=?", uint(convID)).Error; err != nil {
 		ctx.JSON(400, gin.H{

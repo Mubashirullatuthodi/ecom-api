@@ -24,11 +24,11 @@ var Confirmation = false
 var OTPverification = false
 
 type newUser struct {
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
 	Gender    string `json:"gender"`
-	Phone     string `json:"phone_no"`
+	Phone     string `json:"phoneNo"`
 	Password  string `json:"password"`
 	Status    string `json:"status"`
 }
@@ -377,7 +377,7 @@ func OtpCheck(ctx *gin.Context) {
 func ResetPassword(ctx *gin.Context) {
 	type Input struct {
 		Email       string `json:"email"`
-		Newpassword string `json:"newpassword"`
+		Newpassword string `json:"newPassword"`
 	}
 
 	var input Input

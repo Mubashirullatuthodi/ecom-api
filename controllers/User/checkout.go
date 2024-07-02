@@ -14,9 +14,9 @@ import (
 
 func PlaceOrder(ctx *gin.Context) {
 	var checkout struct {
-		Address_id   uint   `json:"address_id"`
-		Payment_type string `json:"payment_type"`
-		CouponCode   string `json:"coupon_code"`
+		AddressID   uint   `json:"addressID"`
+		PaymentType string `json:"paymentType"`
+		CouponCode   string `json:"couponCode"`
 	}
 	if err := ctx.ShouldBind(&checkout); err != nil {
 		ctx.JSON(400, gin.H{
@@ -46,6 +46,12 @@ func PlaceOrder(ctx *gin.Context) {
 	sum := 0
 	for _, v := range Total {
 		sum += v
+	}
+	if sum > 39000 {
+		ctx.JSON(400, gin.H{
+			"error": "it cant be paid by online its above 39000.",
+		})
+		return
 	}
 
 	fmt.Println("total=====================", Total)
@@ -102,7 +108,7 @@ func PlaceOrder(ctx *gin.Context) {
 
 	//adrress checking
 	var adrress models.Address
-	if err := initializers.DB.Where("user_id = ? AND id = ?", userid, checkout.Address_id).First(&adrress).Error; err != nil {
+	if err := initializers.DB.Where("user_id = ? AND id = ?", userid, checkout.AddressID).First(&adrress).Error; err != nil {
 		ctx.JSON(401, gin.H{
 			"error": "Address not found",
 		})
@@ -135,7 +141,7 @@ func PlaceOrder(ctx *gin.Context) {
 	}
 
 	//method checking
-	if checkout.Payment_type == "COD" {
+	if checkout.PaymentType == "COD" {
 		if sum > 10000 {
 			ctx.JSON(401, gin.H{
 				"Error":       "COD not available above 10000 rs",
@@ -147,7 +153,7 @@ func PlaceOrder(ctx *gin.Context) {
 
 	//payment gateway
 	fmt.Println("orderid------------------->", orderCode, "grand total------------->", sum)
-	if checkout.Payment_type == "UPI" {
+	if checkout.PaymentType == "UPI" {
 		orderPaymentID, err := PaymentSubmission(orderCode, sum)
 		if err != nil {
 			ctx.JSON(401, gin.H{
@@ -181,8 +187,8 @@ func PlaceOrder(ctx *gin.Context) {
 		OrderCode:      orderCode,
 		UserId:         userid,
 		CouponCode:     checkout.CouponCode,
-		PaymentMethod:  checkout.Payment_type,
-		AddressID:      checkout.Address_id,
+		PaymentMethod:  checkout.PaymentType,
+		AddressID:      checkout.AddressID,
 		TotalQuantity:  Quantity,
 		ShippingCharge: shippingCharge,
 		OrderAmount:    float64(sum),
@@ -198,12 +204,13 @@ func PlaceOrder(ctx *gin.Context) {
 	}
 
 	for _, v := range cart {
+		off := controllers.OfferCalc(v.Product_ID)
 		orderitems := models.OrderItems{
 			OrderID:         order.ID,
 			ProductID:       v.Product_ID,
 			Quantity:        int(v.Quantity),
 			SubTotal:        v.Product.Price * float64(v.Quantity),
-			OfferPercentage: int(discount),
+			OfferPercentage: int(off),
 		}
 		if err := tx.Create(&orderitems); err.Error != nil {
 			tx.Rollback()
@@ -239,7 +246,7 @@ func PlaceOrder(ctx *gin.Context) {
 		})
 		return
 	}
-	if checkout.Payment_type != "UPI" {
+	if checkout.PaymentType != "UPI" {
 		ctx.JSON(200, gin.H{
 			"status":          "success",
 			"message":         "Order placed successfully",

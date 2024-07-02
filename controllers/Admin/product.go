@@ -67,7 +67,7 @@ func ListProducts(ctx *gin.Context) {
 		Description  string   `json:"description"`
 		Price        float64  `json:"price"`
 		Quantity     string   `json:"quantity"`
-		CategoryName string   `json:"category_name"`
+		CategoryName string   `json:"categoryName"`
 	}
 
 	var List []list
@@ -178,15 +178,6 @@ func ImageUpdate(ctx *gin.Context) {
 		return
 	}
 
-	// file, err := ctx.MultipartForm()
-	// if err != nil {
-	// 	ctx.JSON(400, gin.H{
-	// 		"status": "fail",
-	// 		"Error":  "parsed to multipart form",
-	// 		"code":   400,
-	// 	})
-	// 	return
-	// }
 	images := ctx.Request.MultipartForm.File["images"]
 	for _, img := range images {
 		filepath := "./images/" + img.Filename

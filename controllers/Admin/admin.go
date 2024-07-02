@@ -22,7 +22,7 @@ func AdminSignUp(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(406, gin.H{
 			"status": "Fail",
-			"Error":  "Json binding error",
+			"error":  "Json binding error",
 			"code":   406,
 		})
 		return
@@ -89,21 +89,21 @@ func AdminLogin(ctx *gin.Context) {
 }
 
 func ListUsers(ctx *gin.Context) {
-	var listuser []models.User
+	var listUser []models.User
 
 	type list struct {
 		Id        int
-		FirstName string `json:"firstname"`
-		LastName  string `json:"lastname"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
 		Email     string `json:"email"`
 		Gender    string `json:"gender"`
-		Phone_no  string `json:"phone_no"`
+		Phone_no  string `json:"phoneNo"`
 		Status    string `json:"status"`
 	}
 
 	var List []list
 
-	if err := initializers.DB.Find(&listuser).Error; err != nil {
+	if err := initializers.DB.Find(&listUser).Error; err != nil {
 		ctx.JSON(500, gin.H{
 			"status": "Fail",
 			"error":  err.Error(),
@@ -112,8 +112,8 @@ func ListUsers(ctx *gin.Context) {
 		return
 	}
 
-	for _, value := range listuser {
-		listusers := list{
+	for _, value := range listUser {
+		listUsers := list{
 			Id:        int(value.ID),
 			FirstName: value.FirstName,
 			LastName:  value.LastName,
@@ -122,7 +122,7 @@ func ListUsers(ctx *gin.Context) {
 			Phone_no:  value.Phone,
 			Status:    value.Status,
 		}
-		List = append(List, listusers)
+		List = append(List, listUsers)
 	}
 
 	fmt.Println("list", List)

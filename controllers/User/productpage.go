@@ -57,8 +57,8 @@ func ProductDetail(ctx *gin.Context) {
 		Description         string   `json:"description"`
 		Price               float64  `json:"price"`
 		Quantity            string   `json:"quantity"`
-		CategoryName        string   `json:"category_name"`
-		CategoryDescription string   `json:"category_description"`
+		CategoryName        string   `json:"categoryName"`
+		CategoryDescription string   `json:"categoryDescription"`
 	}
 
 	var List []list

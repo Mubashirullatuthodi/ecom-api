@@ -43,18 +43,18 @@ func GetOrderDetails(ctx *gin.Context) {
 	var orders []models.OrderItems
 
 	type showOrders struct {
-		OrderID        uint    //
-		OrderCode      string  //
-		Product_name   string  //
-		Category_name  string  //
-		Product_Price  float64 //
-		TotalQuantity  int     //
-		TotalPrice     float64 //
-		User_name      string  //
-		User_Address   string
-		User_AddressID uint
-		Order_Date     string
-		Order_Status   string //
+		OrderID        uint    `json:"orderID"`
+		OrderCode      string  `json:"orderCode"`
+		Productname   string  `json:"ProductName"`
+		Categoryname  string  `json:"categoryName"`
+		ProductPrice  float64 `json:"productPrice"`
+		TotalQuantity  int     `json:"totalQuantity"`
+		TotalPrice     float64 `json:"totalPrice"`
+		Username      string  `json:"userName"`
+		UserAddress   string  `json:"userAddress"`
+		UserAddressID uint    `json:"userAddressID"`
+		OrderDate     string  `json:"orderDate"`
+		OrderStatus   string  `json:"orderStatus"`
 	}
 	if err := initializers.DB.Preload("Order").Preload("Product").Preload("Product.Category").Preload("Order.Address").Preload("Order.User").Find(&orders).Error; err != nil {
 		ctx.JSON(500, gin.H{
@@ -70,16 +70,16 @@ func GetOrderDetails(ctx *gin.Context) {
 		show := showOrders{
 			OrderID:        v.ID,
 			OrderCode:      v.Order.OrderCode,
-			Product_name:   v.Product.Name,
-			Product_Price:  v.Product.Price,
+			Productname:   v.Product.Name,
+			ProductPrice:  v.Product.Price,
 			TotalQuantity:  v.Order.TotalQuantity,
 			TotalPrice:     v.Order.OrderAmount,
-			Category_name:  v.Product.Category.Name,
-			User_name:      v.Order.User.FirstName,
-			User_Address:   v.Order.Address.Address,
-			Order_Status:   v.OrderStatus,
-			User_AddressID: v.Order.AddressID,
-			Order_Date:     formatdate,
+			Categoryname:  v.Product.Category.Name,
+			Username:      v.Order.User.FirstName,
+			UserAddress:   v.Order.Address.Address,
+			OrderStatus:   v.OrderStatus,
+			UserAddressID: v.Order.AddressID,
+			OrderDate:     formatdate,
 		}
 		List = append(List, show)
 	}
@@ -94,10 +94,10 @@ func ChangeOrderStatus(ctx *gin.Context) {
 	var order models.OrderItems
 	OrderID := ctx.Param("ID")
 	convOrderID, _ := strconv.ParseUint(OrderID, 10, 64)
-	Orderstatus := ctx.Request.FormValue("status")
-	productID := ctx.Request.FormValue("productID")
-	convID, _ := strconv.ParseUint(productID, 10, 64)
-	err := initializers.DB.Where("order_id=? AND product_id=?", uint(convOrderID), uint(convID)).First(&order)
+	OrderStatus := ctx.Request.FormValue("status")
+	//productID := ctx.Request.FormValue("productID")
+	//convID, _ := strconv.ParseUint(productID, 10, 64)
+	err := initializers.DB.Where("id=?", uint(convOrderID)).First(&order)
 	if err.Error != nil {
 		ctx.JSON(404, gin.H{
 			"status": "Fail",
@@ -112,7 +112,7 @@ func ChangeOrderStatus(ctx *gin.Context) {
 		})
 		return
 	} else {
-		switch Orderstatus {
+		switch OrderStatus {
 		case "Delivered":
 			if err := initializers.DB.Model(&order).Update("OrderStatus", "Delivered").Error; err != nil {
 				ctx.JSON(500, gin.H{
@@ -143,80 +143,3 @@ func ChangeOrderStatus(ctx *gin.Context) {
 	}
 
 }
-
-// func CancelOrder(ctx *gin.Context) {
-// 	//userID:=ctx.Param("ID")
-// 	OrderID := ctx.Request.FormValue("orderID")
-
-// 	if OrderID == "" {
-// 		ctx.JSON(400, gin.H{
-// 			"error": "Order code is required",
-// 		})
-// 		return
-// 	}
-
-// 	var Orders models.Order
-
-// 	if err := initializers.DB.Where("order_code=?", OrderID).First(&Orders).Error; err != nil {
-// 		ctx.JSON(404, gin.H{
-// 			"error": "Order not found",
-// 		})
-// 		return
-// 	}
-// 	fmt.Println("===============================status: ", Orders.OrderStatus)
-
-// 	if Orders.OrderStatus == "Cancelled" {
-// 		ctx.JSON(400, gin.H{
-// 			"error": "this order is already cancelled",
-// 		})
-// 		return
-// 	} else {
-// 		var orderItems []models.OrderItems
-
-// 		fmt.Println("orderid===============================", Orders.ID)
-
-// 		if err := initializers.DB.Where("order_id=?", Orders.ID).Find(&orderItems).Error; err != nil {
-// 			ctx.JSON(500, gin.H{
-// 				"error": "failed to fetch order items",
-// 			})
-// 			return
-// 		}
-
-// 		for _, item := range orderItems {
-// 			product := models.Product{}
-// 			if err := initializers.DB.Where("id=?", item.ProductID).First(&product).Error; err != nil {
-// 				ctx.JSON(500, gin.H{
-// 					"error": "failed to fetch products",
-// 				})
-// 				return
-// 			}
-
-// 			productQty, _ := strconv.ParseUint(product.Quantity, 10, 64)
-// 			productQty += uint64(item.Quantity)
-// 			product.Quantity = strconv.FormatUint(productQty, 10)
-// 			fmt.Println("result======================", productQty)
-
-// 			if err := initializers.DB.Save(&product).Error; err != nil {
-// 				ctx.JSON(500, gin.H{
-// 					"error": "failed to update product",
-// 				})
-// 				return
-// 			}
-// 		}
-
-// 		Orders.OrderStatus = "Cancelled"
-
-// 		if err := initializers.DB.Save(&Orders).Error; err != nil {
-// 			ctx.JSON(500, gin.H{
-// 				"error": "Failed to cancel the order",
-// 			})
-// 			return
-// 		}
-
-// 		ctx.JSON(200, gin.H{
-// 			"status":  "success",
-// 			"message": "Order cancelled successfully",
-// 		})
-
-// 	}
-// }

@@ -55,7 +55,7 @@ func UserGroup(r *gin.RouterGroup) {
 
 	//vieworder
 	r.GET("/user/vieworder", middleware.AuthMiddleware(roleUser), controllers.ViewOrder)
-	r.GET("/user/orderdetails", middleware.AuthMiddleware(roleUser), controllers.OrderDetails)
+	r.GET("/user/orderdetails/:ID", middleware.AuthMiddleware(roleUser), controllers.OrderDetails)
 
 	//Wishlist
 	r.POST("/user/addwishlist/:ID", middleware.AuthMiddleware(roleUser), controllers.AddToWishlist)
