@@ -84,6 +84,7 @@ type Order struct {
 	CouponCode     string
 	Address        Address
 	CouponDiscount int
+	PayOrdID       string
 }
 
 type OrderItems struct {

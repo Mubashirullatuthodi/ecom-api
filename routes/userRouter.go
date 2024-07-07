@@ -69,6 +69,10 @@ func UserGroup(r *gin.RouterGroup) {
 			"Token": token,
 		})
 	})
+	//
+	r.GET("/invoice", func(ctx *gin.Context) {
+		ctx.HTML(200, "invoice.html", gin.H{})
+	})
 	r.POST("/payment/submit", controllers.CreatePayment)
 
 	//wallet

@@ -52,6 +52,7 @@ func ViewOrder(ctx *gin.Context) {
 			"offer_discount":  offer,
 			"Grand_total":     GrandTotal - v.CouponDiscount,
 			"Coupon_discount": v.CouponDiscount,
+			"ordPayID":        v.PayOrdID,
 		})
 	}
 	ctx.JSON(200, gin.H{

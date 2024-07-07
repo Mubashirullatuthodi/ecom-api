@@ -16,7 +16,7 @@ func PlaceOrder(ctx *gin.Context) {
 	var checkout struct {
 		AddressID   uint   `json:"addressID"`
 		PaymentType string `json:"paymentType"`
-		CouponCode   string `json:"couponCode"`
+		CouponCode  string `json:"couponCode"`
 	}
 	if err := ctx.ShouldBind(&checkout); err != nil {
 		ctx.JSON(400, gin.H{
@@ -150,7 +150,7 @@ func PlaceOrder(ctx *gin.Context) {
 			return
 		}
 	}
-
+	var orderPayID string
 	//payment gateway
 	fmt.Println("orderid------------------->", orderCode, "grand total------------->", sum)
 	if checkout.PaymentType == "UPI" {
@@ -167,6 +167,7 @@ func PlaceOrder(ctx *gin.Context) {
 			"paymentID": orderPaymentID,
 			"status":    200,
 		})
+		orderPayID = orderPaymentID
 		fmt.Println("paymentid-------------------->", orderPaymentID)
 		fmt.Println("receipt-------------------->", orderCode)
 		if err := tx.Create(&models.Payment{
@@ -185,6 +186,7 @@ func PlaceOrder(ctx *gin.Context) {
 	//order tables
 	order := models.Order{
 		OrderCode:      orderCode,
+		PayOrdID:       orderPayID,
 		UserId:         userid,
 		CouponCode:     checkout.CouponCode,
 		PaymentMethod:  checkout.PaymentType,
