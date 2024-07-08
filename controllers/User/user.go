@@ -24,7 +24,7 @@ var Confirmation = false
 
 var OTPverification = false
 
-type newUser struct {
+type NewUser struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
@@ -34,7 +34,7 @@ type newUser struct {
 	Status    string `json:"status"`
 }
 
-var newUserInstance newUser
+var newUserInstance NewUser
 
 func Signup(ctx *gin.Context) {
 
@@ -43,6 +43,13 @@ func Signup(ctx *gin.Context) {
 		utils.HandleError(ctx, http.StatusBadRequest, "Please ensure that all required fields are correctly filled out and try again")
 		return
 	}
+
+	errors := utils.ValidateUserInstance(utils.NewUser(newUserInstance))
+	if errors != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"validation errors": errors})
+		return
+	}
+	newUserInstance.FirstName = utils.CapitalizeFirstLetter(newUserInstance.FirstName)
 
 	fmt.Println("user: ", newUserInstance)
 	var existingUser models.User
@@ -147,7 +154,7 @@ func PostOtp(ctx *gin.Context) {
 	} else {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to signup")
 	}
-	newUserInstance = newUser{}
+	newUserInstance = NewUser{}
 }
 
 func ResendOtp(ctx *gin.Context) {

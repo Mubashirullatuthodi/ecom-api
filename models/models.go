@@ -13,7 +13,7 @@ type User struct {
 	LastName  string `json:"lastname"`
 	Email     string `gorm:"unique;not null" json:"email"`
 	Gender    string `gorm:"check:gender IN ('male','MALE','female','FEMALE','')" json:"gender"`
-	Phone     string `gorm:"not null" json:"phone_no"`
+	Phone     string `gorm:"not null" json:"phoneNo"`
 	Password  string `gorm:"not null" json:"password"`
 	Status    string `gorm:"default:Active" json:"status"`
 }
