@@ -34,41 +34,41 @@ type newUser struct {
 	Status    string `json:"status"`
 }
 
-var newuser newUser
+var newUserInstance newUser
 
 func Signup(ctx *gin.Context) {
 
 	OTPverification = false
-	if err := ctx.ShouldBindJSON(&newuser); err != nil {
+	if err := ctx.ShouldBindJSON(&newUserInstance); err != nil {
 		utils.HandleError(ctx, http.StatusBadRequest, "Please ensure that all required fields are correctly filled out and try again")
 		return
 	}
 
-	fmt.Println("user: ", newuser)
+	fmt.Println("user: ", newUserInstance)
 	var existingUser models.User
-	result := initializers.DB.Where("email=?", newuser.Email).First(&existingUser)
+	result := initializers.DB.Where("email=?", newUserInstance.Email).First(&existingUser)
 	if result.Error == nil {
 		utils.HandleError(ctx, http.StatusConflict, "This user already Exist")
 		return
 	}
-	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(newuser.Password), bcrypt.DefaultCost)
+	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(newUserInstance.Password), bcrypt.DefaultCost)
 	if err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to Hash password")
 		return
 	}
-	newuser.Password = string(hashedpassword)
+	newUserInstance.Password = string(hashedpassword)
 
 	otp := authotp.GenerateOTP()
 
 	otpRecord := models.OTP{
 		Otp:    otp,
-		Email:  newuser.Email,
+		Email:  newUserInstance.Email,
 		Exp:    time.Now().Add(5 * time.Minute),
 		UserID: user.ID,
 	}
 	initializers.DB.Create(&otpRecord)
 
-	if err := authotp.SendEmail(newuser.Email, otp); err != nil {
+	if err := authotp.SendEmail(newUserInstance.Email, otp); err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to send OTP via email")
 		return
 	}
@@ -100,7 +100,7 @@ func PostOtp(ctx *gin.Context) {
 		utils.HandleError(ctx, http.StatusBadRequest, "OTP has expired. Please request a new otp.")
 		return
 	}
-	var existingUser models.User
+	//var existingUser models.User
 
 	if input.OTP == otp.Otp {
 		OTPverification = true //if the otp success it will become true and create user
@@ -109,13 +109,13 @@ func PostOtp(ctx *gin.Context) {
 	if OTPverification {
 
 		usernew := models.User{
-			FirstName: newuser.FirstName,
-			LastName:  newuser.LastName,
-			Email:     newuser.Email,
-			Gender:    newuser.Gender,
-			Phone:     newuser.Phone,
-			Password:  newuser.Password,
-			Status:    newuser.Status,
+			FirstName: newUserInstance.FirstName,
+			LastName:  newUserInstance.LastName,
+			Email:     newUserInstance.Email,
+			Gender:    newUserInstance.Gender,
+			Phone:     newUserInstance.Phone,
+			Password:  newUserInstance.Password,
+			Status:    newUserInstance.Status,
 		}
 
 		initializers.DB.Create(&usernew)
@@ -124,33 +124,36 @@ func PostOtp(ctx *gin.Context) {
 		ctx.JSON(201, gin.H{
 			"message": "OTP verified Succesfully. User account created",
 		})
-
-		res := initializers.DB.Unscoped().Where("email=?", usernew.Email).First(&existingUser)
-		if res.Error == nil && existingUser.DeletedAt.Valid {
-			existingUser.FirstName = newuser.FirstName
-			existingUser.LastName = newuser.LastName
-			existingUser.Email = newuser.Email
-			existingUser.Gender = newuser.Gender
-			existingUser.Phone = newuser.Phone
-			existingUser.Password = newuser.Password
-			existingUser.DeletedAt.Time = time.Time{}
-			existingUser.DeletedAt.Valid = false
-			if err := initializers.DB.Save(&existingUser).Error; err != nil {
-				utils.HandleError(ctx, http.StatusInternalServerError, "Account Reactivated")
-				return
-			}
-			fmt.Println("recovered!!!!")
+		if existUser, err := ReactivateUser(); err == nil {
+			saveUser(existUser)
+			log.Println("Account reactivated !")
 		}
+		// res := initializers.DB.Unscoped().Where("email=?", usernew.Email).First(&existingUser)
+		// if res.Error == nil && existingUser.DeletedAt.Valid {
+		// 	existingUser.FirstName = newUserInstance.FirstName
+		// 	existingUser.LastName = newUserInstance.LastName
+		// 	existingUser.Email = newUserInstance.Email
+		// 	existingUser.Gender = newUserInstance.Gender
+		// 	existingUser.Phone = newUserInstance.Phone
+		// 	existingUser.Password = newUserInstance.Password
+		// 	existingUser.DeletedAt.Time = time.Time{}
+		// 	existingUser.DeletedAt.Valid = false
+		// 	if err := initializers.DB.Save(&existingUser).Error; err != nil {
+		// 		utils.HandleError(ctx, http.StatusInternalServerError, "Account Reactivated")
+		// 		return
+		// 	}
+		// 	fmt.Println("recovered!!!!")
+		//}
 	} else {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to signup")
 	}
-	newuser = newUser{}
+	newUserInstance = newUser{}
 }
 
 func ResendOtp(ctx *gin.Context) {
 	var existOTP models.OTP
 
-	result := initializers.DB.Where("email=?", newuser.Email).First(&existOTP)
+	result := initializers.DB.Where("email=?", newUserInstance.Email).First(&existOTP)
 	if result.Error != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to resend")
 		return
@@ -161,18 +164,18 @@ func ResendOtp(ctx *gin.Context) {
 
 	fmt.Println("=========================existotp: ", existOTP.Otp)
 
-	fmt.Println("===========================email: ", newuser.Email)
+	fmt.Println("===========================email: ", newUserInstance.Email)
 	fmt.Println("===========================otpemail: ", existOTP.Email)
-	if existOTP.Email == newuser.Email {
+	if existOTP.Email == newUserInstance.Email {
 		existOTP.Otp = newOTP
-		existOTP.Email = newuser.Email
+		existOTP.Email = newUserInstance.Email
 		existOTP.Exp = time.Now().Add(5 * time.Minute)
 		if err := initializers.DB.Save(&existOTP).Error; err != nil {
 			utils.HandleError(ctx, http.StatusInternalServerError, "Failed to save update OTP")
 			return
 		}
 	}
-	err := authotp.SendEmail(newuser.Email, newOTP)
+	err := authotp.SendEmail(newUserInstance.Email, newOTP)
 	if err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to send via Email")
 		return
@@ -386,4 +389,25 @@ func RefreshToken(ctx *gin.Context) {
 	returnObject["user"] = user
 
 	ctx.JSON(200, returnObject)
+}
+
+func ReactivateUser() (*models.User, error) {
+	var existingUser models.User
+	res := initializers.DB.Unscoped().Where("email=?", newUserInstance.Email).First(&existingUser)
+	if res.Error == nil && existingUser.DeletedAt.Valid {
+		existingUser.FirstName = newUserInstance.FirstName
+		existingUser.LastName = newUserInstance.LastName
+		existingUser.Email = newUserInstance.Email
+		existingUser.Gender = newUserInstance.Gender
+		existingUser.Phone = newUserInstance.Phone
+		existingUser.Password = newUserInstance.Password
+		existingUser.DeletedAt.Time = time.Time{}
+		existingUser.DeletedAt.Valid = false
+		return &existingUser, nil
+	}
+	return nil, res.Error
+}
+
+func saveUser(user *models.User) {
+	initializers.DB.Save(user)
 }

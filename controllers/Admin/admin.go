@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -111,15 +112,10 @@ func ListUsers(ctx *gin.Context) {
 func DeleteUser(ctx *gin.Context) {
 
 	id := ctx.Param("ID")
+	convID, _ := strconv.ParseUint(id, 10, 32)
 	fmt.Println("=============", id)
-	if err := initializers.DB.Where("ID = ?", id).First(&user).Error; err != nil {
-		utils.HandleError(ctx, http.StatusNotFound, "user not found")
-		return
-	}
-
-	//soft delete
-	if err := initializers.DB.Delete(&user); err != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "failed to delete")
+	if err := initializers.DB.Where("id = ?", uint(convID)).Delete(&user).Error; err != nil {
+		utils.HandleError(ctx, http.StatusNotFound, "Failed to Delete")
 		return
 	}
 
@@ -133,8 +129,8 @@ func DeleteUser(ctx *gin.Context) {
 func UpdateUser(ctx *gin.Context) {
 
 	id := ctx.Param("ID")
-
-	if err := initializers.DB.First(&user, id).Error; err != nil {
+	convID, _ := strconv.ParseUint(id, 10, 32)
+	if err := initializers.DB.First(&user, "id =?", uint(convID)).Error; err != nil {
 		fmt.Println("id", id)
 		utils.HandleError(ctx, http.StatusNotFound, "user not found")
 		return
@@ -158,8 +154,9 @@ func UpdateUser(ctx *gin.Context) {
 
 func Status(ctx *gin.Context) {
 	var check models.User
-	user := ctx.Param("ID")
-	err := initializers.DB.First(&check, user)
+	userid := ctx.Param("ID")
+	convID, _ := strconv.ParseUint(userid, 10, 32)
+	err := initializers.DB.First(&check, "id=?", uint(convID))
 	if err.Error != nil {
 		utils.HandleError(ctx, http.StatusBadRequest, "can't find user")
 		return
