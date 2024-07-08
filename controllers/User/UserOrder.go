@@ -28,7 +28,7 @@ func ViewOrder(ctx *gin.Context) {
 		var payment models.Payment
 		initializers.DB.Where("receipt=?", v.OrderCode).First(&payment)
 		fmt.Println("=================", payment.PaymentStatus)
-		formattime := v.CreatedAt.Format("2006-01-02 15:04:05")
+		formattime := v.OrderDate.Format("2006-01-02 15:04:05")
 
 		offer := 0.0
 		GrandTotal := 0

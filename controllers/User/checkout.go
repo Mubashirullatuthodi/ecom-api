@@ -178,6 +178,7 @@ func PlaceOrder(ctx *gin.Context) {
 		ShippingCharge: shippingCharge,
 		OrderAmount:    float64(sum),
 		CouponDiscount: int(coupDisc),
+		OrderDate:      time.Now(),
 	}
 
 	if err := tx.Create(&order); err.Error != nil {

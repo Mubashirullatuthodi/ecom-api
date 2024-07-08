@@ -85,6 +85,7 @@ type Order struct {
 	Address        Address
 	CouponDiscount int
 	PayOrdID       string
+	OrderDate      time.Time
 }
 
 type OrderItems struct {
