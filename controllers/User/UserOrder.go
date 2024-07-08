@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	controllers "github.com/mubashir/e-commerce/controllers/Admin"
+	"github.com/mubashir/e-commerce/utils"
 
 	// "github.com/mubashir/e-commerce/controllers/User"
 	"github.com/mubashir/e-commerce/initializers"
@@ -18,9 +20,7 @@ func ViewOrder(ctx *gin.Context) {
 	UserID := ctx.GetUint("userid")
 
 	if err := initializers.DB.Preload("User").Preload("Address").Where("user_id=?", UserID).Find(&order); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error": "Failed to fetch order",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to fetch order")
 		return
 	}
 
@@ -72,8 +72,6 @@ func OrderDetails(ctx *gin.Context) {
 		Product_Price float64
 		OrderQuantity int
 		TotalPrice    float64
-		//CouponDiscount     int //want to add
-		//TotalAfterDiscount int //want to add
 		Order_Date    string
 		Order_Status  string
 		OfferDiscount int
@@ -116,9 +114,6 @@ func OrderDetails(ctx *gin.Context) {
 			Product_name:  v.Product.Name,
 			Product_Price: v.Product.Price,
 			OrderQuantity: v.Quantity,
-			//TotalPrice:    v.SubTotal,
-			// CouponDiscount:     int(coupon.Discount),
-			// TotalAfterDiscount: int(v.Order.OrderAmount),
 			Order_Date:    formatdate,
 			Order_Status:  v.OrderStatus,
 			OfferDiscount: int(offer),
@@ -143,16 +138,11 @@ func CancelOrder(ctx *gin.Context) {
 	convorderid, _ := strconv.ParseUint(orderID, 10, 64)
 
 	if err := initializers.DB.Where("id=?", uint(convorderid)).First(&orderitem); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error":  "Order not Exist",
-			"status": 401,
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "order not exist")
 	} else {
 		var product models.Product
 		if err := initializers.DB.First(&product, orderitem.ProductID).Error; err != nil {
-			ctx.JSON(401, gin.H{
-				"error": "failed to fetch the product to return quantity",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "failed to fetch the product to return quantity")
 			return
 		}
 		beforeCancellationQuantity, _ := strconv.Atoi(product.Quantity)
@@ -160,23 +150,20 @@ func CancelOrder(ctx *gin.Context) {
 
 		if orderitem.OrderStatus == "Cancelled" {
 			ctx.JSON(200, gin.H{
-				"message": "Order aready Cancelled",
+				"message": "Order already Cancelled",
 				"status":  200,
 			})
 			return
 		}
 		var order models.Order
 		if err := initializers.DB.Where("id=?", orderitem.OrderID).First(&order).Error; err != nil {
-			ctx.JSON(400, gin.H{
-				"error": "failed to find order code!!",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "failed to find order code!!")
+			return
 		}
 
 		var paymentid models.Payment
 		if err := initializers.DB.Where("receipt=?", order.OrderCode).First(&paymentid).Error; err != nil {
-			ctx.JSON(404, gin.H{
-				"error": "Failed to find payment information",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "failed to find payment information")
 			return
 		}
 
@@ -187,9 +174,7 @@ func CancelOrder(ctx *gin.Context) {
 		//begin transaction
 		tx := initializers.DB.Begin()
 		if err := tx.Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "Failed to begin transaction",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "filed to begin transaction")
 			return
 		}
 
@@ -197,10 +182,7 @@ func CancelOrder(ctx *gin.Context) {
 			OrderStatus: "Cancelled",
 		}); err.Error != nil {
 			tx.Rollback()
-			ctx.JSON(401, gin.H{
-				"error":  "order not cancelled",
-				"status": 401,
-			})
+			utils.HandleError(ctx, http.StatusBadRequest, "order not cancelled")
 		} else {
 
 			beforeCancellationQuantity += orderitem.Quantity
@@ -210,18 +192,14 @@ func CancelOrder(ctx *gin.Context) {
 			product.Quantity = convQuantity
 			if err := initializers.DB.Save(&product).Error; err != nil {
 				tx.Rollback()
-				ctx.JSON(500, gin.H{
-					"error": "Failed to update product Quantity",
-				})
+				utils.HandleError(ctx, http.StatusInternalServerError, "failed to update the product quantity")
 				return
 			}
 
 			//payment table updation
 			if err := tx.Model(&paymentid).Update("payment_amount", paymentid.PaymentAmount-int(cancelAmount)).Error; err != nil {
 				tx.Rollback()
-				ctx.JSON(500, gin.H{
-					"error": "Failed to update payment method",
-				})
+				utils.HandleError(ctx, http.StatusInternalServerError, "failed to update the payment method")
 				return
 			}
 
@@ -231,16 +209,12 @@ func CancelOrder(ctx *gin.Context) {
 				UserID:  userid,
 			}).Error; err != nil {
 				tx.Rollback()
-				ctx.JSON(500, gin.H{
-					"error": "Failed to update wallet",
-				})
+				utils.HandleError(ctx, http.StatusInternalServerError, "failed to update wallet")
 				return
 			}
 
 			if err := tx.Commit().Error; err != nil {
-				ctx.JSON(500, gin.H{
-					"error": "Failed to commit transaction",
-				})
+				utils.HandleError(ctx, http.StatusInternalServerError, "failed to commit transaction")
 				return
 			}
 
@@ -251,68 +225,3 @@ func CancelOrder(ctx *gin.Context) {
 		}
 	}
 }
-
-// func CancelingOrder(ctx *gin.Context) {
-// 	var orderitems models.OrderItems
-
-// 	orderItemID := ctx.Param("ID")
-// 	convID, _ := strconv.ParseUint(orderItemID, 10, 32)
-
-// 	if err := initializers.DB.Where("id=?", uint(convID)).First(&orderitems).Error; err != nil {
-// 		ctx.JSON(400, gin.H{
-// 			"error": "failed to find the orderitem",
-// 		})
-// 		return
-// 	}
-
-// 	if orderitems.OrderStatus == "Cancelled" {
-// 		ctx.JSON(400, gin.H{
-// 			"error": "the order already cancelled",
-// 		})
-// 		return
-// 	}
-
-// 	QtyBeforeCancellation := strconv.Atoi(orderitems.Quantity)
-
-// 	var order models.Order
-// 	if err := initializers.DB.Where("id=?", orderitems.OrderID).First(&order).Error; err != nil {
-// 		ctx.JSON(400, gin.H{
-// 			"error": "failed to find order code!!",
-// 		})
-// 	}
-
-// 	var paymentid models.Payment
-// 	initializers.DB.Where("receipt=?", order.OrderCode).First(&paymentid)
-
-// 	cancelAmount := paymentid.PaymentAmount
-
-// 	if err := initializers.DB.Model(&orderitems).Updates(&models.OrderItems{
-// 		OrderStatus: "Cancelled",
-// 	}); err.Error != nil {
-// 		ctx.JSON(401, gin.H{
-// 			"error":  "order not cancelled",
-// 			"status": 401,
-// 		})
-// 	} else {
-// 		ctx.JSON(200, gin.H{
-// 			"message": "Order Cancelled Succesfully",
-// 		})
-// 		QtyBeforeCancellation += orderitems.Quantity
-// 		fmt.Println("after quantity--------------------->", QtyBeforeCancellation)
-// 		convQuantity := strconv.Itoa(QtyBeforeCancellation)
-
-// 		var product models.Product
-// 		initializers.DB.Where("id=?", orderitems.ProductID).First(&product)
-// 		product.Quantity = convQuantity
-// 		if err := initializers.DB.Save(&product).Error; err != nil {
-// 			log.Fatalf("Failed to save product: %v", err)
-// 		}
-
-// 		userid := ctx.GetUint("userid")
-// 		initializers.DB.Create(&models.Wallet{
-// 			Balance: float64(cancelAmount),
-// 			UserID:  userid,
-// 		})
-
-// 	}
-// }

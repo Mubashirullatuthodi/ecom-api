@@ -7,11 +7,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 	"github.com/razorpay/razorpay-go"
 )
 
@@ -59,7 +61,7 @@ func CreatePayment(ctx *gin.Context) {
 	var Paymentdetails = make(map[string]string)
 	var Payment models.Payment
 	if err := ctx.ShouldBindJSON(&Paymentdetails); err != nil {
-		ctx.JSON(500, gin.H{"Error": "Invalid Request"})
+		utils.HandleError(ctx, http.StatusInternalServerError, "Invalid request")
 	}
 	fmt.Println("====>", Paymentdetails)
 	err := RazorPaymentVerification(Paymentdetails["signatureID"], Paymentdetails["order_Id"], Paymentdetails["paymentID"])
@@ -70,7 +72,7 @@ func CreatePayment(ctx *gin.Context) {
 
 	fmt.Println("======", Paymentdetails["order_Id"])
 	if err := initializers.DB.Where("ord_id = ?", Paymentdetails["order_Id"]).First(&Payment); err.Error != nil {
-		ctx.JSON(500, gin.H{"Error": "OrderID not found"})
+		utils.HandleError(ctx, http.StatusNotFound, "OrderID not found")
 		return
 	}
 	fmt.Println("-------", Payment)
@@ -80,7 +82,7 @@ func CreatePayment(ctx *gin.Context) {
 		PaymentID:     Payment.PaymentID,
 		PaymentStatus: Payment.PaymentStatus,
 	}); err.Error != nil {
-		ctx.JSON(500, gin.H{"Error": "Failed to update paymentID"})
+		utils.HandleError(ctx, http.StatusNotFound, "failed to update payment ID")
 	} else {
 		ctx.JSON(200, gin.H{"Message": "Payment Done"})
 	}

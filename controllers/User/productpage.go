@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func ProductPage(ctx *gin.Context) {
@@ -21,11 +23,7 @@ func ProductPage(ctx *gin.Context) {
 	var List []productlist
 
 	if err := initializers.DB.Find(&Product).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "Fail",
-			"Error":  "Cant find products",
-			"code":   500,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "cant find products")
 		return
 	}
 
@@ -66,11 +64,7 @@ func ProductDetail(ctx *gin.Context) {
 	id := ctx.Param("ID")
 
 	if err := initializers.DB.Preload("Category").Where("id=?", id).Find(&listProduct).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "fail",
-			"error":  "failed to list products",
-			"code":   500,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "failed to list products")
 		return
 	}
 

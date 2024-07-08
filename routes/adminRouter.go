@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	controllers "github.com/mubashir/e-commerce/controllers/Admin"
 	"github.com/mubashir/e-commerce/middleware"
-	//"github.com/mubashir/e-commerce/middleware"
 )
 
 var RoleAdmin = "Admin"

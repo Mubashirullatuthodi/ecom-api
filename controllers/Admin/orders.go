@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func AdminViewOrder(ctx *gin.Context) {
@@ -13,9 +15,7 @@ func AdminViewOrder(ctx *gin.Context) {
 	var orderData []gin.H
 	count := 0
 	if err := initializers.DB.Preload("Address.User").Find(&order); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error": "failed to fetch order",
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "failed to fetch order")
 		return
 	}
 
@@ -43,13 +43,13 @@ func GetOrderDetails(ctx *gin.Context) {
 	var orders []models.OrderItems
 
 	type showOrders struct {
-		OrderID        uint    `json:"orderID"`
-		OrderCode      string  `json:"orderCode"`
+		OrderID       uint    `json:"orderID"`
+		OrderCode     string  `json:"orderCode"`
 		Productname   string  `json:"ProductName"`
 		Categoryname  string  `json:"categoryName"`
 		ProductPrice  float64 `json:"productPrice"`
-		TotalQuantity  int     `json:"totalQuantity"`
-		TotalPrice     float64 `json:"totalPrice"`
+		TotalQuantity int     `json:"totalQuantity"`
+		TotalPrice    float64 `json:"totalPrice"`
 		Username      string  `json:"userName"`
 		UserAddress   string  `json:"userAddress"`
 		UserAddressID uint    `json:"userAddressID"`
@@ -57,9 +57,7 @@ func GetOrderDetails(ctx *gin.Context) {
 		OrderStatus   string  `json:"orderStatus"`
 	}
 	if err := initializers.DB.Preload("Order").Preload("Product").Preload("Product.Category").Preload("Order.Address").Preload("Order.User").Find(&orders).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"error": "Failed to Fetch Items",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to fetch Items")
 		return
 	}
 
@@ -68,12 +66,12 @@ func GetOrderDetails(ctx *gin.Context) {
 	for _, v := range orders {
 		formatdate := v.CreatedAt.Format("2006-01-02 15:04:05")
 		show := showOrders{
-			OrderID:        v.ID,
-			OrderCode:      v.Order.OrderCode,
+			OrderID:       v.ID,
+			OrderCode:     v.Order.OrderCode,
 			Productname:   v.Product.Name,
 			ProductPrice:  v.Product.Price,
-			TotalQuantity:  v.Order.TotalQuantity,
-			TotalPrice:     v.Order.OrderAmount,
+			TotalQuantity: v.Order.TotalQuantity,
+			TotalPrice:    v.Order.OrderAmount,
 			Categoryname:  v.Product.Category.Name,
 			Username:      v.Order.User.FirstName,
 			UserAddress:   v.Order.Address.Address,
@@ -99,26 +97,17 @@ func ChangeOrderStatus(ctx *gin.Context) {
 	//convID, _ := strconv.ParseUint(productID, 10, 64)
 	err := initializers.DB.Where("id=?", uint(convOrderID)).First(&order)
 	if err.Error != nil {
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "Can't Find Order",
-			"code":   404,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "cant find the order")
 		return
 	}
 	if order.OrderStatus == "Cancelled" {
-		ctx.JSON(400, gin.H{
-			"error": "This order is already cancelled",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "this order is already cancelled")
 		return
 	} else {
 		switch OrderStatus {
 		case "Delivered":
 			if err := initializers.DB.Model(&order).Update("OrderStatus", "Delivered").Error; err != nil {
-				ctx.JSON(500, gin.H{
-					"status": "Fail",
-					"Error":  "Failed to update order status",
-				})
+				utils.HandleError(ctx, http.StatusInternalServerError, "failed to update order status")
 				return
 			}
 			ctx.JSON(200, gin.H{
@@ -126,19 +115,15 @@ func ChangeOrderStatus(ctx *gin.Context) {
 			})
 		case "Pending":
 			if err := initializers.DB.Model(&order).Update("OrderStatus", "Pending").Error; err != nil {
-				ctx.JSON(500, gin.H{
-					"status": "Fail",
-					"Error":  "Failed to update order status",
-				})
+				utils.HandleError(ctx, http.StatusInternalServerError, "failed to update order status")
 				return
 			}
 			ctx.JSON(200, gin.H{
 				"message": "OrderStatus Changed to Pending",
 			})
 		default:
-			ctx.JSON(400, gin.H{
-				"message": "Change the status into 'Delivered','Pending'",
-			})
+			utils.HandleError(ctx, http.StatusBadRequest, "Change the status into 'Delivered','Pending'")
+			return
 		}
 	}
 

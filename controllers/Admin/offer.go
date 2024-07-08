@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 type addoffer struct {
@@ -23,10 +25,7 @@ func CreateOffer(ctx *gin.Context) {
 	var product models.Product
 	ctx.ShouldBindJSON(&addOffer)
 	if err := initializers.DB.Where("id=?", addOffer.ProductID).First(&product); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error":  "Product not available",
-			"status": 401,
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "failed to bind")
 		return
 	}
 	startDate, _ := time.Parse("2006-01-02", addOffer.Created)
@@ -39,10 +38,8 @@ func CreateOffer(ctx *gin.Context) {
 		Created:   startDate,
 		Expire:    EndDate,
 	}); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error":  "offer already exist",
-			"status": 401,
-		})
+		utils.HandleError(ctx, http.StatusConflict, "offer already exist")
+		return
 	} else {
 		ctx.JSON(200, gin.H{
 			"message": "offer added for the product",
@@ -55,10 +52,7 @@ func ListOffer(ctx *gin.Context) {
 	var offers []models.Offer
 	var offerList []gin.H
 	if err := initializers.DB.Find(&offers); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error":  "Offer not Found",
-			"status": 401,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "Offer not Found")
 		return
 	}
 	for _, v := range offers {
@@ -106,9 +100,7 @@ func OfferApply(ctx *gin.Context) {
 	convID, _ := strconv.ParseUint(offerID, 32, 10)
 
 	if err := initializers.DB.Unscoped().First(&offer, "id=?", uint(convID)).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"Error": "Invalid OfferID",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "Invalid OfferID")
 		return
 	}
 
@@ -117,9 +109,7 @@ func OfferApply(ctx *gin.Context) {
 	switch action {
 	case "list":
 		if err := initializers.DB.Unscoped().Model(&offer).Where("id=?", uint(convID)).Update("deleted_at", nil).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"error": "Failed to restore offer",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "Failed to restore offer")
 			return
 		}
 		ctx.JSON(200, gin.H{
@@ -128,9 +118,7 @@ func OfferApply(ctx *gin.Context) {
 
 	case "unlist":
 		if err := initializers.DB.Where("id=?", uint(convID)).Delete(&offer).Error; err != nil {
-			ctx.JSON(500, gin.H{
-				"Error": "Failed to delete offer",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "Failed to delete offer")
 			return
 		}
 
@@ -138,8 +126,7 @@ func OfferApply(ctx *gin.Context) {
 			"Message": "Offer Unisted succesfully",
 		})
 	default:
-		ctx.JSON(400, gin.H{
-			"Error": "Invalid Action",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "Invalid Action")
+		return
 	}
 }

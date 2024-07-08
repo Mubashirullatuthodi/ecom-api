@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func AddtoCart(ctx *gin.Context) {
@@ -17,9 +19,7 @@ func AddtoCart(ctx *gin.Context) {
 	}
 
 	if err := ctx.BindJSON(&addcart); err != nil {
-		ctx.JSON(400, gin.H{
-			"error": "Failed to bind",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
 	id := ctx.GetUint("userid")
@@ -28,11 +28,7 @@ func AddtoCart(ctx *gin.Context) {
 	var product models.Product
 	result := initializers.DB.First(&product, addcart.Productid)
 	if result.Error != nil {
-		ctx.JSON(400, gin.H{
-			"status": "Fail",
-			"mesage": "Product not found",
-			"code":   400,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "product not found")
 		return
 	}
 
@@ -63,11 +59,7 @@ func AddtoCart(ctx *gin.Context) {
 		}
 		existingCart.Quantity = newQuantity
 		if err := initializers.DB.Save(&existingCart).Error; err != nil {
-			ctx.JSON(400, gin.H{
-				"status": "Fail",
-				"Error":  "Failed to update Cart",
-				"code":   400,
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "Failed to update cart")
 			return
 		}
 		ctx.JSON(200, gin.H{
@@ -83,11 +75,7 @@ func AddtoCart(ctx *gin.Context) {
 		}
 
 		if err := initializers.DB.Create(&Addcart).Error; err != nil {
-			ctx.JSON(400, gin.H{
-				"status": "Fail",
-				"Error":  "Failed to add cart",
-				"code":   400,
-			})
+			utils.HandleError(ctx, http.StatusBadRequest, "Failed to add cart")
 			return
 		}
 
@@ -102,21 +90,19 @@ func ListCart(ctx *gin.Context) {
 	var listCart []models.Cart
 
 	if err := initializers.DB.Preload("User").Preload("Product").Find(&listCart).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"error": "Failed to Fetch Items",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to fetch items")
 		return
 	}
 
 	type Showcart struct {
-		CartId              uint   `json:"cartid"`
-		Userid              uint   `json:"userid"`
+		CartId             uint   `json:"cartid"`
+		Userid             uint   `json:"userid"`
 		ProductName        string `json:"productName"`
 		ProductImage       string `json:"productImage"`
 		ProductDescription string `json:"productDescription"`
-		Quantity            string `json:"quantity"`
+		Quantity           string `json:"quantity"`
 		AvailableQuantity  string `json:"stockAvailable"`
-		Price               string `json:"price"`
+		Price              string `json:"price"`
 	}
 
 	var List []Showcart
@@ -131,13 +117,13 @@ func ListCart(ctx *gin.Context) {
 		fmt.Println("total=============================", total)
 		totalPrice := strconv.FormatFloat(total, 'f', -1, 64)
 		list := Showcart{
-			CartId:              value.ID,
-			Userid:              value.User_ID,
+			CartId:             value.ID,
+			Userid:             value.User_ID,
 			ProductName:        value.Product.Name,
 			ProductImage:       value.Product.ImagePath[0],
 			ProductDescription: value.Product.Description,
-			Price:               totalPrice,
-			Quantity:            qty,
+			Price:              totalPrice,
+			Quantity:           qty,
 			AvailableQuantity:  value.Product.Quantity,
 		}
 		List = append(List, list)
@@ -160,22 +146,17 @@ func RemoveCart(ctx *gin.Context) {
 	id := ctx.Param("ID")
 
 	if err := initializers.DB.Where("ID = ?", id).First(&carts).Error; err != nil {
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "cart not found",
-			"code":   404,
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "cart not found")
+		return
 	}
 
-	initializers.DB.Delete(&carts)
+	if err := initializers.DB.Delete(&carts); err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to remove cart")
+		return
+	}
 
 	ctx.JSON(204, gin.H{
 		"status":  "success",
 		"message": "cart removed successfully",
 	})
 }
-
-// func ReducingQuantity(ctx *gin.Context){
-// 	id := ctx.Param("ID")
-
-// }

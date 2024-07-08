@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	controllers "github.com/mubashir/e-commerce/controllers/Admin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func PlaceOrder(ctx *gin.Context) {
@@ -19,9 +21,7 @@ func PlaceOrder(ctx *gin.Context) {
 		CouponCode  string `json:"couponCode"`
 	}
 	if err := ctx.ShouldBind(&checkout); err != nil {
-		ctx.JSON(400, gin.H{
-			"error": "Failed to bind",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "failed to bind")
 		return
 	}
 
@@ -48,9 +48,7 @@ func PlaceOrder(ctx *gin.Context) {
 		sum += v
 	}
 	if sum > 39000 {
-		ctx.JSON(400, gin.H{
-			"error": "it cant be paid by online its above 39000.",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "it cant be paid by online its above 39000.")
 		return
 	}
 
@@ -68,9 +66,7 @@ func PlaceOrder(ctx *gin.Context) {
 		if err := initializers.DB.Where("coupon_code=?", checkout.CouponCode).First(&couponcheck).Error; err != nil {
 
 			fmt.Println("coupon code-------------->", couponcheck.CouponCode)
-			ctx.JSON(401, gin.H{
-				"Error": "Invalid Coupon",
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, "Invalid coupon")
 			return
 		}
 		//find the total above the condition
@@ -87,9 +83,7 @@ func PlaceOrder(ctx *gin.Context) {
 		var usageCount int64
 		initializers.DB.Model(&models.CouponUsage{}).Where("user_id=? AND coupon_id=?", useridforcoupon, couponcheck.ID).Count(&usageCount)
 		if usageCount > 0 {
-			ctx.JSON(401, gin.H{
-				"Error": "You have already used this coupon",
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, "you have already use this coupon")
 			return
 		}
 
@@ -109,9 +103,7 @@ func PlaceOrder(ctx *gin.Context) {
 	//adrress checking
 	var adrress models.Address
 	if err := initializers.DB.Where("user_id = ? AND id = ?", userid, checkout.AddressID).First(&adrress).Error; err != nil {
-		ctx.JSON(401, gin.H{
-			"error": "Address not found",
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "Address not found")
 		return
 	}
 
@@ -127,13 +119,11 @@ func PlaceOrder(ctx *gin.Context) {
 
 	//check whether COD is done
 	if len(cart) == 0 {
-		ctx.JSON(400, gin.H{
-			"message": "already done the order",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "already done the order")
 		return
 	}
 
-	//shiping charge
+	//shipping charge
 	var shippingCharge float64
 	if sum < 15000 {
 		shippingCharge = 40
@@ -143,10 +133,7 @@ func PlaceOrder(ctx *gin.Context) {
 	//method checking
 	if checkout.PaymentType == "COD" {
 		if sum > 10000 {
-			ctx.JSON(401, gin.H{
-				"Error":       "COD not available above 10000 rs",
-				"totalAmount": sum,
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, "COD not available above 10000 rs")
 			return
 		}
 	}
@@ -156,9 +143,7 @@ func PlaceOrder(ctx *gin.Context) {
 	if checkout.PaymentType == "UPI" {
 		orderPaymentID, err := PaymentSubmission(orderCode, sum)
 		if err != nil {
-			ctx.JSON(401, gin.H{
-				"error": err,
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, err.Error())
 			tx.Rollback()
 			return
 		}
@@ -176,9 +161,7 @@ func PlaceOrder(ctx *gin.Context) {
 			PaymentStatus: "not done",
 			PaymentAmount: int(sum),
 		}); err.Error != nil {
-			ctx.JSON(401, gin.H{
-				"Error": "Failed to upload payment",
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, "failed to upload payment")
 			fmt.Println("failed to upload payment details: ", err.Error)
 			tx.Rollback()
 		}
@@ -199,9 +182,7 @@ func PlaceOrder(ctx *gin.Context) {
 
 	if err := tx.Create(&order); err.Error != nil {
 		tx.Rollback()
-		ctx.JSON(401, gin.H{
-			"error": "Failed to place order",
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "failed to place order")
 		return
 	}
 
@@ -216,9 +197,7 @@ func PlaceOrder(ctx *gin.Context) {
 		}
 		if err := tx.Create(&orderitems); err.Error != nil {
 			tx.Rollback()
-			ctx.JSON(401, gin.H{
-				"error": "Failed place order",
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, "failed to place order")
 			fmt.Println("failed to place order items: ", err.Error)
 			return
 		}
@@ -228,24 +207,19 @@ func PlaceOrder(ctx *gin.Context) {
 		convert -= uint64(v.Quantity)
 		v.Product.Quantity = fmt.Sprint(convert)
 		if err := initializers.DB.Save(&v.Product); err.Error != nil {
-			ctx.JSON(401, gin.H{
-				"error": "failed to update product stock",
-			})
+			utils.HandleError(ctx, http.StatusUnauthorized, "failed to update stock")
+			return
 		}
 	}
 
 	if err := initializers.DB.Where("user_id=?", userid).Delete(&models.Cart{}); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"errror": "Failed to delete order",
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "failed to delete order")
 		return
 	}
 
 	if err := tx.Commit(); err.Error != nil {
 		tx.Rollback()
-		ctx.JSON(401, gin.H{
-			"error": "Failed to commit transaction",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to commit transaction")
 		return
 	}
 	if checkout.PaymentType != "UPI" {

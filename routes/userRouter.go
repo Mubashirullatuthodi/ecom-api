@@ -35,7 +35,6 @@ func UserGroup(r *gin.RouterGroup) {
 
 	//orders
 	r.POST("/user/profile/orderscancel/:ID", middleware.AuthMiddleware(roleUser), controllers.CancelOrder)
-	//r.POST("/user/profile/ordercancelsingle", middleware.AuthMiddleware(roleUser), controllers.CancelSingleProduct)
 
 	//forgotPassword
 	r.POST("/user/profile/forgotpassword", middleware.AuthMiddleware(roleUser), controllers.ProfileForgotPassword)

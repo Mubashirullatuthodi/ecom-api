@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 type newcoupon struct {
@@ -17,26 +18,26 @@ type newcoupon struct {
 	Description string  `json:"descrition"`
 	MaxUsage    int     `json:"maxUsage"`
 	Start_Date  string  `json:"startDate"`
-	Expiry_date string  `json:"expiryDate"`
+	Expiry_Date string  `json:"expiryDate"`
 }
 
 func CreateCoupon(ctx *gin.Context) {
 	var coupon newcoupon
 
 	if err := ctx.ShouldBindJSON(&coupon); err != nil {
-		ctx.JSON(500, "Failed to Bind")
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
 
 	startDate, err := time.Parse("2006-01-02", coupon.Start_Date)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid created date format"})
+		utils.HandleError(ctx, http.StatusBadRequest, "Invalid created date format")
 		return
 	}
 	fmt.Println("----------------------------->", startDate)
-	endDate, err := time.Parse("2006-01-02", coupon.Expiry_date)
+	endDate, err := time.Parse("2006-01-02", coupon.Expiry_Date)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid created date format"})
+		utils.HandleError(ctx, http.StatusBadRequest, "Invalid created date format")
 		return
 	}
 
@@ -49,10 +50,8 @@ func CreateCoupon(ctx *gin.Context) {
 		Start_Date:  startDate,
 		Expiry_date: endDate,
 	}); err.Error != nil {
-		ctx.JSON(401, gin.H{
-			"error":  "Coupon Already exist",
-			"status": 401,
-		})
+		utils.HandleError(ctx, http.StatusConflict, "Coupon Already exist")
+		return
 	} else {
 		ctx.JSON(200, gin.H{
 			"message": "New coupon added",
@@ -64,17 +63,13 @@ func ListCoupon(ctx *gin.Context) {
 	var listCoupon []models.Coupons
 
 	if err := initializers.DB.Find(&listCoupon).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "Fail",
-			"Error":  "Failed to find coupon details",
-			"code":   500,
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to find coupon details")
 		return
 	}
 	type show struct {
 		ID          uint
-		Code        string 
-		Discount    float64 
+		Code        string
+		Discount    float64
 		Condition   int
 		Description string
 		MaxUsage    int
@@ -111,10 +106,7 @@ func DeleteCoupon(ctx *gin.Context) {
 	var coupon models.Coupons
 	couponId := ctx.Param("ID")
 	if err := initializers.DB.Where("id=?", couponId).Delete(&coupon); err.Error != nil {
-		ctx.JSON(400, gin.H{
-			"error":  "coupon not found",
-			"status": 400,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "coupon not found")
 		return
 	}
 

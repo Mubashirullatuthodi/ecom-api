@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func BestSelling(ctx *gin.Context) {
@@ -51,9 +52,7 @@ func BestSelling(ctx *gin.Context) {
 		convID, _ := strconv.ParseUint(categoryID, 32, 10)
 		fmt.Println("-----", categoryID)
 		if categoryID == "" {
-			ctx.JSON(400, gin.H{
-				"error": "category id is required",
-			})
+			utils.HandleError(ctx, http.StatusBadRequest, "Category ID required")
 			return
 		}
 		query := `

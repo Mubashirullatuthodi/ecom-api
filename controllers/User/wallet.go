@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func GetWallet(ctx *gin.Context) {
@@ -14,9 +16,7 @@ func GetWallet(ctx *gin.Context) {
 	var balanceSum float64 = 0
 
 	if err := initializers.DB.Model(&models.Wallet{}).Where("user_id=?", userid).Select("COALESCE(SUM(balance),0)").Row().Scan(&balanceSum); err != nil {
-		ctx.JSON(500, gin.H{
-			"error": "Failed to retrieve wallet balance",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to retrieve wallet balance")
 		return
 	}
 
@@ -30,9 +30,7 @@ func WalletHistory(ctx *gin.Context) {
 	userid := ctx.GetUint("userid")
 
 	if err := initializers.DB.Where("user_id = ?", userid).Find(&walletHistory).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"Error": "Failed to find history wallet",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to Find wallet history")
 		return
 	}
 

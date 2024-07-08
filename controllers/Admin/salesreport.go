@@ -10,6 +10,7 @@ import (
 	"github.com/jung-kurt/gofpdf/v2"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 type ReportRequest struct {
@@ -34,9 +35,7 @@ type Search struct {
 func SalesReport(ctx *gin.Context) {
 	var search Search
 	if err := ctx.ShouldBindJSON(&search); err != nil {
-		ctx.JSON(500, gin.H{
-			"error": "Failed to bind",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
 	//var start time.Time
@@ -66,9 +65,7 @@ func SalesReport(ctx *gin.Context) {
 		Where("order_items.created_at BETWEEN ? AND ?", threshold, time.Now()).
 		Where("order_items.deleted_at IS NULL").
 		Find(&sales).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"error": "failed to fetch",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "failed to fetch")
 		return
 	}
 
@@ -197,11 +194,7 @@ func GeneratePDF(newsales []ReportRequest, grandTotal, overallSales, overallDisc
 
 	path := fmt.Sprintf("C:/Users/shanm/Desktop/pdf/salesReport_%s_%s.pdf", time.Now().Format("20060102_150405"), "sales")
 	if err := pdf.OutputFileAndClose(path); err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "error",
-			"code":    401,
-			"message": "failed to generate pdf",
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "failed to generate pdf")
 		return
 	}
 

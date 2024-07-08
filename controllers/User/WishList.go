@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func AddToWishlist(ctx *gin.Context) {
@@ -28,9 +30,7 @@ func AddToWishlist(ctx *gin.Context) {
 	}
 
 	if err := initializers.DB.Create(&wishlist).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"message": "could not add Product to wishlist",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "could not add product to wishlist")
 		return
 	}
 
@@ -47,10 +47,7 @@ func RemoveWishlist(ctx *gin.Context) {
 	var WishList models.WishList
 
 	if err := initializers.DB.Where("product_id=? AND user_id=?", uint(convID), userid).Delete(&WishList).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "Fail",
-			"error":  "failed to remove item",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to remove item")
 		return
 	}
 	ctx.JSON(204, gin.H{
@@ -66,9 +63,7 @@ func ListWishList(ctx *gin.Context) {
 	userid := ctx.GetUint("userid")
 
 	if err := initializers.DB.Where("user_id=?", userid).Preload("Product").Find(&wishlist).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"message": "Error fetching wishlist",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "Error fetching wishlist")
 		return
 	}
 	type show struct {

@@ -11,6 +11,7 @@ import (
 	controllers "github.com/mubashir/e-commerce/controllers/Admin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 type report struct {
@@ -37,9 +38,7 @@ func GenerateInvoice(ctx *gin.Context) {
 		Where("order_items.order_status = ?", "Delivered").
 		Where("order_items.deleted_at IS NULL").
 		Find(&orderitem).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"error": "failed to fetch",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to fetch")
 		return
 	}
 
@@ -65,7 +64,7 @@ func GenerateInvoice(ctx *gin.Context) {
 			TotalPrice:      float64(item.Quantity) * item.Product.Price,
 		}
 		new = append(new, r)
-		ShippingAddress = fmt.Sprintf(item.Order.User.FirstName+"\n"+item.Order.Address.Address + "\n"+item.Order.Address.Town+"," + item.Order.Address.District + "," + item.Order.Address.Pincode + ",\n" + item.Order.Address.State+"\n+91 "+item.Order.User.Phone)
+		ShippingAddress = fmt.Sprintf(item.Order.User.FirstName + "\n" + item.Order.Address.Address + "\n" + item.Order.Address.Town + "," + item.Order.Address.District + "," + item.Order.Address.Pincode + ",\n" + item.Order.Address.State + "\n+91 " + item.Order.User.Phone)
 		orderNumber = item.Order.OrderCode
 		orderDate = item.Order.CreatedAt.Format("2006-01-02")
 	}
@@ -161,23 +160,10 @@ func GeneratePDF(new []report, shippingAddress, orderNumber, OrderDate string, s
 	pdf.CellFormat(columnWidth[0]+columnWidth[1]+columnWidth[2], 10, "Grand Total:", "1", 0, "L", false, 0, "")
 	pdf.CellFormat(60, 10, fmt.Sprintf("%.2f /-", float64((subtotal-int(overalldiscount)-coupondiscount)+shippingcharge)), "1", 1, "C", false, 0, "")
 
-	// //write pdf to file
-	// err := pdf.OutputFileAndClose("invoice.pdf")
-	// if err != nil {
-	// 	ctx.JSON(500, gin.H{
-	// 		"error": "Failed to Generate PDF",
-	// 	})
-	// 	return
-	// }
-
 	//generate pdf file
 	path := fmt.Sprintf("C:/Users/shanm/Desktop/pdf/invoice/invoice_%s_%s.pdf", time.Now().Format("20060102_150405"), "invoice")
 	if err := pdf.OutputFileAndClose(path); err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "error",
-			"Code":    401,
-			"message": "failed to generate pdf",
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "failed to generate PDF")
 		return
 	}
 

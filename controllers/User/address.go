@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 func AddAddress(ctx *gin.Context) {
@@ -24,20 +25,12 @@ func AddAddress(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&inputAddress); err != nil {
-		ctx.JSON(400, gin.H{
-			"status": "Fail",
-			"Error":  "Failed to Bind",
-			"code":   400,
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
 
 	if err := initializers.DB.First(&user, userID).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"status": "Fail",
-			"Error":  "user ID not found to add address",
-			"code":   400,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "User_ID not found to add address")
 		return
 	}
 
@@ -52,11 +45,7 @@ func AddAddress(ctx *gin.Context) {
 	}
 
 	if err := initializers.DB.Create(&AddressUser).Error; err != nil {
-		ctx.JSON(400, gin.H{
-			"status": "Fail",
-			"Error":  "Failed to add Address",
-			"code":   400,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "failed to add address")
 		return
 	}
 
@@ -67,10 +56,10 @@ func AddAddress(ctx *gin.Context) {
 }
 
 func EditAddress(ctx *gin.Context) {
-	userID:=ctx.GetUint("userid")
+	userID := ctx.GetUint("userid")
 
 	var editAddress struct {
-		UserID  uint   `json:"userID"`
+		UserID   uint   `json:"userID"`
 		Address  string `json:"address"`
 		Town     string `json:"town"`
 		District string `json:"district"`
@@ -79,9 +68,7 @@ func EditAddress(ctx *gin.Context) {
 	}
 
 	if err := ctx.BindJSON(&editAddress); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "failed to bind",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
 
@@ -89,9 +76,7 @@ func EditAddress(ctx *gin.Context) {
 
 	var address models.Address
 	if err := initializers.DB.First(&address, id).Error; err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{
-			"error": "address not found",
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "address not found")
 		return
 	}
 	if address.User_ID == userID {
@@ -102,16 +87,12 @@ func EditAddress(ctx *gin.Context) {
 		address.Town = editAddress.Town
 
 		if err := initializers.DB.Save(&address).Error; err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to save",
-			})
+			utils.HandleError(ctx, http.StatusInternalServerError, "failed to save")
 			return
 		}
 		ctx.JSON(http.StatusOK, gin.H{"message": "Address updated successfully", "address": address})
 	} else {
-		ctx.JSON(400, gin.H{
-			"error": "user_id not found",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "User_ID not found")
 		return
 	}
 
@@ -120,9 +101,7 @@ func EditAddress(ctx *gin.Context) {
 func DeleteAddress(ctx *gin.Context) {
 	userID, exist := ctx.Get("userid")
 	if !exist {
-		ctx.JSON(500, gin.H{
-			"error": "user_id not found",
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, "User_ID not found")
 		return
 	}
 
@@ -132,26 +111,24 @@ func DeleteAddress(ctx *gin.Context) {
 	id := ctx.Param("ID")
 	fmt.Println("=============", id)
 	if err := initializers.DB.Where("ID = ?", id).First(&address).Error; err != nil {
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "User not found",
-			"code":   404,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "User not found")
+		return
 	}
 
 	//soft delete
 	if userID == address.User_ID {
-		initializers.DB.Delete(&address)
+		if err := initializers.DB.Delete(&address); err != nil {
+			utils.HandleError(ctx, http.StatusInternalServerError, "failed to delete address")
+			return
+		}
 
 		ctx.JSON(204, gin.H{
 			"status":  "success",
 			"message": "address delete succesfully",
 		})
 	} else {
-		ctx.JSON(400, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "user not found")
+		return
 	}
 
 }

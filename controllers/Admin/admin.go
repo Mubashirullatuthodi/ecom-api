@@ -10,6 +10,7 @@ import (
 	"github.com/mubashir/e-commerce/initializers"
 	"github.com/mubashir/e-commerce/middleware"
 	"github.com/mubashir/e-commerce/models"
+	"github.com/mubashir/e-commerce/utils"
 )
 
 var user models.User
@@ -20,22 +21,14 @@ func AdminSignUp(ctx *gin.Context) {
 	var adminSignUp models.Admin
 	err := ctx.ShouldBindJSON(&adminSignUp)
 	if err != nil {
-		ctx.JSON(406, gin.H{
-			"status": "Fail",
-			"error":  "Json binding error",
-			"code":   406,
-		})
+		utils.HandleError(ctx, http.StatusNotAcceptable, "failed to bind")
 		return
 	}
-	er := initializers.DB.Create(&adminSignUp)
-	if er.Error != nil {
-		ctx.JSON(500, gin.H{
-			"status":  "Fail",
-			"message": "Failed to signUp",
-			"code":    500,
-		})
+	if err := initializers.DB.Create(&adminSignUp); err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to signup")
 		return
 	}
+
 	ctx.JSON(201, gin.H{
 		"status":  "Success",
 		"message": "Admin Added Succesfully",
@@ -52,11 +45,7 @@ func AdminLogin(ctx *gin.Context) {
 	var admin Admin
 
 	if err := ctx.BindJSON(&admin); err != nil {
-		ctx.JSON(501, gin.H{
-			"status": "Fail",
-			"error":  "Fail to Bind json",
-			"code":   501,
-		})
+		utils.HandleError(ctx, http.StatusNotImplemented, "failed to bind")
 		return
 	}
 
@@ -64,11 +53,7 @@ func AdminLogin(ctx *gin.Context) {
 	result := initializers.DB.Where("email = ?", admin.Email).First(&existingAdmin)
 
 	if result.Error != nil {
-		ctx.JSON(401, gin.H{
-			"status": "Fail",
-			"error":  "Invalid email or Password",
-			"code":   401,
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
@@ -80,11 +65,8 @@ func AdminLogin(ctx *gin.Context) {
 			"message": "successfully Logged to adminpanel",
 		})
 	} else {
-		ctx.JSON(401, gin.H{
-			"status": "fail",
-			"error":  "invalid email or password",
-			"code":   401,
-		})
+		utils.HandleError(ctx, http.StatusUnauthorized, "Invalid email or password")
+		return
 	}
 }
 
@@ -97,18 +79,14 @@ func ListUsers(ctx *gin.Context) {
 		LastName  string `json:"lastName"`
 		Email     string `json:"email"`
 		Gender    string `json:"gender"`
-		Phone_no  string `json:"phoneNo"`
+		PhoneNo   string `json:"phoneNo"`
 		Status    string `json:"status"`
 	}
 
 	var List []list
 
 	if err := initializers.DB.Find(&listUser).Error; err != nil {
-		ctx.JSON(500, gin.H{
-			"status": "Fail",
-			"error":  err.Error(),
-			"code":   500,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -119,7 +97,7 @@ func ListUsers(ctx *gin.Context) {
 			LastName:  value.LastName,
 			Email:     value.Email,
 			Gender:    value.Gender,
-			Phone_no:  value.Phone,
+			PhoneNo:   value.Phone,
 			Status:    value.Status,
 		}
 		List = append(List, listUsers)
@@ -135,15 +113,15 @@ func DeleteUser(ctx *gin.Context) {
 	id := ctx.Param("ID")
 	fmt.Println("=============", id)
 	if err := initializers.DB.Where("ID = ?", id).First(&user).Error; err != nil {
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "User not found",
-			"code":   404,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "user not found")
+		return
 	}
 
 	//soft delete
-	initializers.DB.Delete(&user)
+	if err := initializers.DB.Delete(&user); err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to delete")
+		return
+	}
 
 	ctx.JSON(204, gin.H{
 		"status":  "success",
@@ -158,27 +136,17 @@ func UpdateUser(ctx *gin.Context) {
 
 	if err := initializers.DB.First(&user, id).Error; err != nil {
 		fmt.Println("id", id)
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "user not found",
-			"code":   404,
-		})
+		utils.HandleError(ctx, http.StatusNotFound, "user not found")
 		return
 	}
 
 	if err := ctx.BindJSON(&user); err != nil {
-		ctx.JSON(400, gin.H{
-			"status": "Fail",
-			"error":  "Failed to bind json",
-			"code":   400,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "Failed to bind json")
 		return
 	}
 
 	if err := initializers.DB.Model(&user).Updates(user).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		utils.HandleError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -193,11 +161,7 @@ func Status(ctx *gin.Context) {
 	user := ctx.Param("ID")
 	err := initializers.DB.First(&check, user)
 	if err.Error != nil {
-		ctx.JSON(404, gin.H{
-			"status": "Fail",
-			"Error":  "Can't Find User",
-			"code":   404,
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "can't find user")
 		return
 	}
 	if check.Status == "Active" {
