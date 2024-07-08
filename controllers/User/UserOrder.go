@@ -33,6 +33,7 @@ func ViewOrder(ctx *gin.Context) {
 		offer := 0.0
 		GrandTotal := 0
 		total := 0
+		shippingCharge := v.ShippingCharge
 
 		var orders []models.OrderItems
 		initializers.DB.Where("order_id=?", v.ID).Find(&orders)
@@ -43,16 +44,17 @@ func ViewOrder(ctx *gin.Context) {
 			GrandTotal = total - int(offer)
 		}
 		listOrder = append(listOrder, gin.H{
-			"orderID":         v.ID,
-			"userID":          v.UserId,
-			"paymentMethod":   v.PaymentMethod,
-			"orderDate":       formattime,
-			"paymentStatus":   payment.PaymentStatus,
-			"paidAmount":      payment.PaymentAmount,
-			"offer_discount":  offer,
-			"Grand_total":     GrandTotal - v.CouponDiscount,
-			"Coupon_discount": v.CouponDiscount,
-			"ordPayID":        v.PayOrdID,
+			"orderID":        v.ID,
+			"userID":         v.UserId,
+			"paymentMethod":  v.PaymentMethod,
+			"orderDate":      formattime,
+			"paymentStatus":  payment.PaymentStatus,
+			"paidAmount":     payment.PaymentAmount,
+			"offerDiscount":  offer,
+			"shippingCharge": shippingCharge,
+			"GrandTotal":     (GrandTotal - v.CouponDiscount) + int(shippingCharge),
+			"CouponDiscount": v.CouponDiscount,
+			"ordPayID":       v.PayOrdID,
 		})
 	}
 	ctx.JSON(200, gin.H{
