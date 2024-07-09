@@ -19,7 +19,7 @@ func AddtoCart(ctx *gin.Context) {
 	}
 
 	if err := ctx.BindJSON(&addcart); err != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
+		utils.HandleError(ctx, http.StatusInternalServerError, "failed to binds")
 		return
 	}
 	id := ctx.GetUint("userid")
