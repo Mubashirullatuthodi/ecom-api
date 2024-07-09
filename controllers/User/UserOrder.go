@@ -115,6 +115,7 @@ func OrderDetails(ctx *gin.Context) {
 			OrderCode:     v.Order.OrderCode,
 			Product_name:  v.Product.Name,
 			Product_Price: v.Product.Price,
+			TotalPrice:    v.Product.Price * float64(v.Quantity),
 			OrderQuantity: v.Quantity,
 			Order_Date:    formatdate,
 			Order_Status:  v.OrderStatus,
