@@ -21,7 +21,7 @@ func GetWallet(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, gin.H{
-		"wallet": balanceSum,
+		"wallet": fmt.Sprintf("%.2f rs", balanceSum),
 	})
 }
 
@@ -42,8 +42,7 @@ func WalletHistory(ctx *gin.Context) {
 		History = append(History, gin.H{
 			"ID":               v.ID,
 			"Balance":          v.Balance,
-			"userID":           v.UserID,
-			"transaction_time": formatted,
+			"transactionTime": formatted,
 		})
 	}
 
