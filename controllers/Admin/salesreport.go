@@ -192,7 +192,7 @@ func GeneratePDF(newsales []ReportRequest, grandTotal, overallSales, overallDisc
 	pdf.CellFormat(100, 10, "Overall Discount:", "0", 0, "L", false, 0, "")
 	pdf.CellFormat(30, 10, fmt.Sprintf("%.2f", overallDiscount), "0", 1, "L", false, 0, "")
 
-	path := fmt.Sprintf("C:/Users/shanm/Desktop/pdf/salesReport_%s_%s.pdf", time.Now().Format("20060102_150405"), "sales")
+	path := fmt.Sprintf("/home/ubuntu/Desktop/salesReport_%s_%s.pdf", time.Now().Format("20060102_150405"), "sales")
 	if err := pdf.OutputFileAndClose(path); err != nil {
 		utils.HandleError(ctx, http.StatusUnauthorized, "failed to generate pdf")
 		return
