@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mubashir/e-commerce/initializers"
@@ -10,83 +10,74 @@ import (
 	"github.com/mubashir/e-commerce/utils"
 )
 
+type ProductList struct {
+	ID    int     `json:"id"`
+	Name  string  `json:"name"`
+	Price float64 `json:"price"`
+	Stock string  `json:"stock"`
+}
+
+type productDetails struct {
+	ID                  int      `json:"id"`
+	Name                string   `json:"name"`
+	Image               []string `json:"images"`
+	Description         string   `json:"description"`
+	Price               float64  `json:"price"`
+	Quantity            string   `json:"quantity"`
+	CategoryName        string   `json:"categoryName"`
+	CategoryDescription string   `json:"categoryDescription"`
+}
+
 func ProductPage(ctx *gin.Context) {
-	var Product []models.Product
+	var Products []models.Product
+	var productList []ProductList
 
-	type productlist struct {
-		ID    int
-		Name  string
-		Price float64
-		Stock string
-	}
-
-	var List []productlist
-
-	if err := initializers.DB.Find(&Product).Error; err != nil {
-		utils.HandleError(ctx, http.StatusNotFound, "cant find products")
+	err := initializers.DB.Select("ID,Name,Price,Quantity").Find(&Products).Error
+	if err != nil {
+		utils.HandleError(ctx, http.StatusNotFound, "can't find products")
 		return
 	}
 
-	for _, value := range Product {
-		list := productlist{
-			ID:    int(value.ID),
-			Name:  value.Name,
-			Price: value.Price,
-			Stock: value.Quantity,
-		}
-		List = append(List, list)
+	for _, product := range Products {
+		productList = append(productList, ProductList{
+			ID:    int(product.ID),
+			Name:  product.Name,
+			Price: product.Price,
+			Stock: product.Quantity,
+		})
 	}
-
-	fmt.Println("list", List)
 
 	ctx.JSON(200, gin.H{
 		"status":   "success",
-		"products": List,
+		"products": productList,
 	})
 }
 
 func ProductDetail(ctx *gin.Context) {
-	var listProduct []models.Product
-
-	type list struct {
-		ID                  int      `json:"id"`
-		Name                string   `json:"name"`
-		Image               []string `json:"images"`
-		Description         string   `json:"description"`
-		Price               float64  `json:"price"`
-		Quantity            string   `json:"quantity"`
-		CategoryName        string   `json:"categoryName"`
-		CategoryDescription string   `json:"categoryDescription"`
-	}
-
-	var List []list
+	var Product models.Product
 
 	id := ctx.Param("ID")
+	categoryID, _ := strconv.ParseUint(id, 10, 32)
 
-	if err := initializers.DB.Preload("Category").Where("id=?", id).Find(&listProduct).Error; err != nil {
-		utils.HandleError(ctx, http.StatusNotFound, "failed to list products")
+	err := initializers.DB.Preload("Category").Where("id=?", uint(categoryID)).Find(&Product).Error
+	if err != nil {
+		utils.HandleError(ctx, http.StatusNotFound, "failed to list product")
 		return
 	}
-
-	for _, value := range listProduct {
-		fmt.Println("image", value.ImagePath)
-		listproduct := list{
-			ID:                  int(value.ID),
-			Image:               value.ImagePath,
-			Name:                value.Name,
-			Description:         value.Description,
-			Price:               value.Price,
-			Quantity:            value.Quantity,
-			CategoryName:        value.Category.Name,
-			CategoryDescription: value.Category.Description,
-		}
-		List = append(List, listproduct)
+	productDetail := productDetails{
+		ID:                  int(Product.ID),
+		Name:                Product.Name,
+		Image:               Product.ImagePath,
+		Description:         Product.Description,
+		Price:               Product.Price,
+		Quantity:            Product.Quantity,
+		CategoryName:        Product.Category.Name,
+		CategoryDescription: Product.Category.Description,
 	}
-	fmt.Println("list roducts: ", List)
 
 	ctx.JSON(200, gin.H{
 		"status":   "success",
-		"Products": List,
+		"Products": productDetail,
 	})
 
 }

@@ -15,6 +15,18 @@ import (
 
 var ChangeConfirmation = false
 
+type UserDetails struct {
+	AddressId uint   `json:"addressID"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	PhoneNo   string `json:"phoneNo"`
+	Address   string `json:"address"`
+	Town      string `json:"town"`
+	District  string `json:"district"`
+	Pincode   string `json:"pincode"`
+	State     string `json:"state"`
+}
+
 func ListAddress(ctx *gin.Context) {
 	var address []models.Address
 
@@ -33,22 +45,10 @@ func ListAddress(ctx *gin.Context) {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to list address")
 		return
 	}
-	type UserDetails struct {
-		AddressId uint   `json:"addressID"`
-		FirstName string `json:"firstName"`
-		LastName  string `json:"lastName"`
-		PhoneNo   string `json:"phoneNo"`
-		Address   string `json:"address"`
-		Town      string `json:"town"`
-		District  string `json:"district"`
-		Pincode   string `json:"pincode"`
-		State     string `json:"state"`
-	}
-
 	var details []UserDetails
 
 	for _, value := range address {
-		list := UserDetails{
+		details = append(details, UserDetails{
 			AddressId: value.ID,
 			FirstName: value.User.FirstName,
 			LastName:  value.User.LastName,
@@ -58,18 +58,17 @@ func ListAddress(ctx *gin.Context) {
 			District:  value.District,
 			Pincode:   value.Pincode,
 			State:     value.State,
-		}
-		details = append(details, list)
+		})
 	}
 
-	ctx.JSON(200, gin.H{
+	ctx.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"Details": details,
 	})
 }
 
 func ProfileChangePassword(ctx *gin.Context) {
-	userid := ctx.GetUint("userid")
+	userID := ctx.GetUint("userid")
 	var password struct {
 		CurrentPassword string `json:"currentPassword"`
 		NewPassword     string `json:"newPassword"`
@@ -81,53 +80,49 @@ func ProfileChangePassword(ctx *gin.Context) {
 		return
 	}
 	var user models.User
-	result := initializers.DB.First(&user, userid)
-	if result.Error != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to find user")
+	if err := initializers.DB.First(&user, userID).Error; err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to find User")
 		return
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password.CurrentPassword))
-	if err != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "wrong old password")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password.CurrentPassword)); err != nil {
+		utils.HandleError(ctx, http.StatusUnauthorized, "Wrong old password")
 		return
 	}
 
 	if password.NewPassword != password.ConfirmPassword {
-		utils.HandleError(ctx, http.StatusBadRequest, "Fails")
-	} else {
-		hashedpassword, err := bcrypt.GenerateFromPassword([]byte(password.NewPassword), bcrypt.DefaultCost)
-		if err != nil {
-			ctx.JSON(500, gin.H{
-				"status": "failed to hash password",
-			})
-			return
-		}
-
-		user.Password = string(hashedpassword)
-		r := initializers.DB.Save(&user)
-		if r.Error != nil {
-			utils.HandleError(ctx, http.StatusInternalServerError, "Failed to change password")
-			return
-		}
-
-		ctx.JSON(200, gin.H{
-			"status":  "success",
-			"message": "Password Changed Successfully",
-		})
+		utils.HandleError(ctx, http.StatusBadRequest, "New password and confirm password do not match")
+		return
 	}
+	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(password.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to hash Password")
+		return
+	}
+
+	user.Password = string(hashedpassword)
+	if err := initializers.DB.Save(&user).Error; err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to change password")
+		return
+	}
+
+	ctx.JSON(200, gin.H{
+		"status":  "success",
+		"message": "Password changed successfully",
+	})
+
 }
 
 func ProfileForgotPassword(ctx *gin.Context) {
-	type input struct {
+	var input struct {
 		Email string `json:"email"`
 	}
-	var Input input
-	if err := ctx.ShouldBindJSON(&Input); err != nil {
+	if err := ctx.ShouldBindJSON(&input); err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
-	result := initializers.DB.Where("email = ?", Input.Email).First(&user)
+	var user models.User
+	result := initializers.DB.Where("email = ?", input.Email).First(&user)
 	if result.Error != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "failed to check email")
 		return
@@ -136,29 +131,30 @@ func ProfileForgotPassword(ctx *gin.Context) {
 
 	otpRecord := models.OTP{
 		Otp:    otp,
-		Email:  Input.Email,
+		Email:  input.Email,
 		Exp:    time.Now().Add(5 * time.Minute),
 		UserID: user.ID,
 	}
-	initializers.DB.Create(&otpRecord)
+	if err := initializers.DB.Create(&otpRecord).Error; err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to create OTP record")
+		return
+	}
 
-	errr := authotp.SendEmail(Input.Email, otp)
-
-	if errr != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "failed to send via OTP")
+	if err := authotp.SendEmail(input.Email, otp); err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to send OTP via email")
 		return
 	}
 	ctx.JSON(200, gin.H{
 		"status":  "success",
-		"message": "OTP for reset password is sent to your email,validate OTP",
+		"message": "OTP for reset password is sent to your email. validate OTP.",
 	})
 }
 
 func EditProfile(ctx *gin.Context) {
 	var useraddress models.Address
-	var users models.User
+	var user models.User
 
-	var editprofile struct {
+	var input struct {
 		FirstName string `json:"firstName"`
 		Gender    string `json:"gender"`
 		Email     string `json:"email"`
@@ -167,35 +163,31 @@ func EditProfile(ctx *gin.Context) {
 		Pincode   string `json:"pincode"`
 	}
 
-	if err := ctx.ShouldBindJSON(&editprofile); err != nil {
+	if err := ctx.ShouldBindJSON(&input); err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "failed to bind")
 		return
 	}
 
-	userid := ctx.GetUint("userid")
-	fmt.Println("=================", userid)
-
-	if err := initializers.DB.Where("user_id=?", userid).First(&useraddress).Error; err != nil {
-		utils.HandleError(ctx, http.StatusNotFound, "address not found")
-		return
-	}
-
-	if err := initializers.DB.Where("id=?", userid).First(&users).Error; err != nil {
+	userID := ctx.GetUint("userid")
+	if err := initializers.DB.First(&user, userID).Error; err != nil {
 		utils.HandleError(ctx, http.StatusNotFound, "User not found")
 		return
 	}
 
-	users.FirstName = editprofile.FirstName
-	users.Gender = editprofile.Gender
-	users.Email = editprofile.Email
-	users.Phone = editprofile.Phone_no
-	useraddress.Address = editprofile.Address
-	useraddress.Pincode = editprofile.Pincode
+	if err := initializers.DB.Where("user_id=?", userID).First(&useraddress).Error; err != nil {
+		utils.HandleError(ctx, http.StatusNotFound, "address not found")
+		return
+	}
 
-	if err := initializers.DB.Save(&users).Error; err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save user",
-		})
+	user.FirstName = input.FirstName
+	user.Gender = input.Gender
+	user.Email = input.Email
+	user.Phone = input.Phone_no
+	useraddress.Address = input.Address
+	useraddress.Pincode = input.Pincode
+
+	if err := initializers.DB.Save(&user).Error; err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to save user")
 		return
 	}
 
@@ -203,6 +195,10 @@ func EditProfile(ctx *gin.Context) {
 		utils.HandleError(ctx, http.StatusInternalServerError, "failed to save")
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Address updated successfully", "address": useraddress})
+	ctx.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Address updated successfully",
+		"address": useraddress,
+	})
 
 }

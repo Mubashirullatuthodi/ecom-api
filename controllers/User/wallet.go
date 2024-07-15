@@ -11,40 +11,46 @@ import (
 )
 
 func GetWallet(ctx *gin.Context) {
-	userid := ctx.GetUint("userid")
+	userID := ctx.GetUint("userid")
 
-	var balanceSum float64 = 0
+	var balanceSum float64
 
-	if err := initializers.DB.Model(&models.Wallet{}).Where("user_id=?", userid).Select("COALESCE(SUM(balance),0)").Row().Scan(&balanceSum); err != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "failed to retrieve wallet balance")
+	err := initializers.DB.Model(&models.Wallet{}).Where("user_id=?", userID).Select("COALESCE(SUM(balance),0)").Row().Scan(&balanceSum)
+	if err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to retrieve wallet balance")
 		return
 	}
 
 	ctx.JSON(200, gin.H{
-		"wallet": fmt.Sprintf("%.2f rs", balanceSum),
+		"wallet": formatCurrency(balanceSum),
 	})
 }
 
 func WalletHistory(ctx *gin.Context) {
 	var walletHistory []models.Wallet
-	userid := ctx.GetUint("userid")
+	userID := ctx.GetUint("userid")
 
-	if err := initializers.DB.Where("user_id = ?", userid).Find(&walletHistory).Error; err != nil {
-		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to Find wallet history")
+	err := initializers.DB.Where("user_id = ?", userID).Find(&walletHistory).Error
+	if err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to find wallet history")
 		return
 	}
 
-	var History []gin.H
+	history := make([]gin.H, len(walletHistory))
 
-	for _, v := range walletHistory {
-		fmt.Println("--------->", v)
-		formatted := v.CreatedAt.Format("2006-01-02 15:04:05")
-		History = append(History, gin.H{
-			"ID":               v.ID,
-			"Balance":          v.Balance,
-			"transactionTime": formatted,
-		})
+	for i, v := range walletHistory {
+		history[i] = gin.H{
+			"ID":              v.ID,
+			"Balance":         v.Balance,
+			"transactionTime": v.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
 	}
 
-	ctx.JSON(200, History)
+	ctx.JSON(http.StatusOK, gin.H{
+		"history": history,
+	})
+}
+
+func formatCurrency(amount float64) string {
+	return fmt.Sprintf("%.2f rs", amount)
 }

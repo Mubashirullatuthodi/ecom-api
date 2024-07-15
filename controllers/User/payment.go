@@ -33,14 +33,14 @@ func PaymentSubmission(orderid string, amount int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	razororderID, _ := order["id"].(string)
-	fmt.Println("razororderid---------------->", razororderID)
-	return razororderID, nil
+	razorOrderID, _ := order["id"].(string)
+	fmt.Println("razororderid---------------->", razorOrderID)
+	return razorOrderID, nil
 }
 
 func RazorPaymentVerification(sign, orderId, paymentId string) error {
 	secretKey := os.Getenv("RAZORPAY_SECRET")
-	signature := sign
+	//signature := sign
 	secret := secretKey
 	data := orderId + "|" + paymentId
 	h := hmac.New(sha256.New, []byte(secret))
@@ -49,7 +49,7 @@ func RazorPaymentVerification(sign, orderId, paymentId string) error {
 		panic(err)
 	}
 	sha := hex.EncodeToString(h.Sum(nil))
-	if subtle.ConstantTimeCompare([]byte(sha), []byte(signature)) != 1 {
+	if subtle.ConstantTimeCompare([]byte(sha), []byte(sign)) != 1 {
 		return errors.New("PAYMENT FAILED")
 	} else {
 		return nil

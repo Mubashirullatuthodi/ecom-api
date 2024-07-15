@@ -11,13 +11,17 @@ import (
 )
 
 func AddToWishlist(ctx *gin.Context) {
-	userid := ctx.GetUint("userid")
-	id := ctx.Param("ID")
-	ProductID, _ := strconv.ParseUint(id, 10, 32)
+	userID := ctx.GetUint("userid")
+	productIDStr := ctx.Param("ID")
+	ProductID, err := strconv.ParseUint(productIDStr, 10, 32)
+	if err != nil {
+		utils.HandleError(ctx, http.StatusBadRequest, "Invalid product ID")
+		return
+	}
 
 	var WishList models.WishList
 
-	if err := initializers.DB.Where("user_id = ? AND product_id = ?", userid, id).First(&WishList).Error; err == nil {
+	if err := initializers.DB.Where("user_id = ? AND product_id = ?", userID, uint(ProductID)).First(&WishList).Error; err == nil {
 		ctx.JSON(200, gin.H{
 			"message": "Product Already Exist in the Wishist",
 		})
@@ -25,7 +29,7 @@ func AddToWishlist(ctx *gin.Context) {
 	}
 
 	wishlist := models.WishList{
-		UserID:    userid,
+		UserID:    userID,
 		ProductID: uint(ProductID),
 	}
 
@@ -40,13 +44,17 @@ func AddToWishlist(ctx *gin.Context) {
 }
 
 func RemoveWishlist(ctx *gin.Context) {
-	userid := ctx.GetUint("userid")
-	productid := ctx.Param("ID")
-	convID, _ := strconv.ParseUint(productid, 10, 32)
+	userID := ctx.GetUint("userid")
+	productIDStr := ctx.Param("ID")
+	productID, err := strconv.ParseUint(productIDStr, 10, 32)
+	if err != nil {
+		utils.HandleError(ctx, http.StatusBadRequest, "Invalid product ID")
+		return
+	}
 
 	var WishList models.WishList
 
-	if err := initializers.DB.Where("product_id=? AND user_id=?", uint(convID), userid).Delete(&WishList).Error; err != nil {
+	if err := initializers.DB.Where("product_id=? AND user_id=?", uint(productID), userID).Delete(&WishList).Error; err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to remove item")
 		return
 	}
@@ -60,9 +68,9 @@ func RemoveWishlist(ctx *gin.Context) {
 func ListWishList(ctx *gin.Context) {
 	var wishlist []models.WishList
 
-	userid := ctx.GetUint("userid")
+	userID := ctx.GetUint("userid")
 
-	if err := initializers.DB.Where("user_id=?", userid).Preload("Product").Find(&wishlist).Error; err != nil {
+	if err := initializers.DB.Where("user_id=?", userID).Preload("Product").Find(&wishlist).Error; err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Error fetching wishlist")
 		return
 	}
@@ -73,12 +81,11 @@ func ListWishList(ctx *gin.Context) {
 
 	var list []show
 
-	for _, v := range wishlist {
-		new := show{
-			Productname:  v.Product.Name,
-			Productprice: v.Product.Price,
-		}
-		list = append(list, new)
+	for _, item := range wishlist {
+		list = append(list, show{
+			Productname:  item.Product.Name,
+			Productprice: item.Product.Price,
+		})
 	}
 
 	ctx.JSON(200, gin.H{
