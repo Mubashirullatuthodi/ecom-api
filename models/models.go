@@ -144,7 +144,7 @@ type Wallet struct {
 
 type Offer struct {
 	gorm.Model
-	ProductID uint
+	ProductID uint    `gorm:"unique"`
 	OfferName string  `gorm:"unique" json:"offername"`
 	Discount  float64 `json:"discount"`
 	Created   time.Time
