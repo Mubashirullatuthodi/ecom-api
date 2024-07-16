@@ -17,25 +17,24 @@
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
-        var token = "{{.token}}";
-        console.log("JWT Token: ",token);
+        
 
-        function initiatePayment(orderId){
+        function initiatePayment(OrderId){
             var options = {
                 key:'rzp_test_BOIycDc2BPGQkq',
                 amount:10000,
                 currency:'INR',
                 name:'E commerce',
                 description:'Payment for product',
-                order_id:orderId,
+                order_id:OrderId,
                 handler:function(response){
 
                     alert('payment ID: '+response.razorpay_payment_id);
-                    var paymentid = response.razorpay_payment_id;
+                    var paymentId = response.razorpay_payment_id;
                     var signature = response.razorpay_signature;
-                    var orderid = response.razorpay_order_id;
+                    var orderId = response.razorpay_order_id;
 
-                    sendpaymentdetails(orderid,paymentid,signature)
+                    sendPaymentDetails(orderId,paymentId,signature)
                 },
                 theme:{
                     color: '#F37254' // Customize theme color
@@ -45,17 +44,16 @@
             var rzp = new Razorpay(options);
             rzp.open();
         }
-        function sendpaymentdetails(orderid,paymentid,signature){
+        function sendPaymentDetails(orderId,paymentId,signature){
             fetch("/payment/submit",{
 
                 method: 'POST',
                 headers:{
                     'Content-Type':'application/json',
-                    'Authorization':'Bearer ' + token,
                 },
                 body:JSON.stringify({
-                    order_Id:orderid,
-                    paymentID:paymentid,
+                    order_Id:orderId,
+                    paymentID:paymentId,
                     signatureID:signature
                 })
             })
@@ -67,11 +65,11 @@
         document.getElementById('orderForm').addEventListener('submit',function(event){
             event.preventDefault();
 
-            var orderId = document.getElementById('orderIdInput').value;
+            var OrderId = document.getElementById('orderIdInput').value;
 
              // Check if orderId is fetched successfully
-        if (orderId) {
-          alert('Order ID fetched successfully: ' + orderId);
+        if (OrderId) {
+          alert('Order ID fetched successfully: ' + OrderId);
           // Show the payment button now that order ID is fetched
           document.getElementById('payButton').style.display = 'block';
         } else {
@@ -81,8 +79,8 @@
 
        // Event listener for payment button click
        document.getElementById('payButton').addEventListener('click', function() {
-        var orderId = document.getElementById('orderIdInput').value;
-        initiatePayment(orderId);
+        var OrderId = document.getElementById('orderIdInput').value;
+        initiatePayment(OrderId);
         })
     </script>
 </body>

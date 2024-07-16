@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	controllers "github.com/mubashir/e-commerce/controllers/User"
 	"github.com/mubashir/e-commerce/middleware"
@@ -64,18 +62,14 @@ func UserGroup(r *gin.RouterGroup) {
 	r.GET("/user/wishlist", middleware.AuthMiddleware(roleUser), controllers.ListWishList)
 
 	//payment
-	r.GET("/payment", middleware.AuthMiddleware(roleUser), func(ctx *gin.Context) {
-		token, _ := ctx.Get("token")
-		fmt.Println("df:", token)
-		ctx.HTML(200, "Razorpay.html", gin.H{
-			"token": token,
-		})
+	r.GET("/payment", func(ctx *gin.Context) {
+		ctx.HTML(200, "Razorpay.html", gin.H{})
 	})
 	//
 	r.GET("/invoice", func(ctx *gin.Context) {
 		ctx.HTML(200, "invoice.html", gin.H{})
 	})
-	r.POST("/payment/submit", middleware.AuthMiddleware(roleUser), controllers.CreatePayment)
+	r.POST("/payment/submit", controllers.CreatePayment)
 
 	//wallet
 	r.GET("/user/wallet", middleware.AuthMiddleware(roleUser), controllers.GetWallet)

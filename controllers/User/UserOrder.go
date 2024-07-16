@@ -27,13 +27,9 @@ func ViewOrder(ctx *gin.Context) {
 	for _, v := range order {
 		var payment models.Payment
 		initializers.DB.Where("receipt=?", v.OrderCode).First(&payment)
-		fmt.Println("=================", payment.PaymentStatus)
 		formattime := v.OrderDate.Format("2006-01-02 15:04:05")
 
-		offer := 0.0
-		GrandTotal := 0
-		total := 0
-		shippingCharge := v.ShippingCharge
+		offer, GrandTotal, total, shippingCharge := 0.0, 0, 0, v.ShippingCharge
 
 		var orders []models.OrderItems
 		initializers.DB.Where("order_id=?", v.ID).Find(&orders)
@@ -79,11 +75,11 @@ func OrderDetails(ctx *gin.Context) {
 		OfferDiscount int
 	}
 
-	userid := ctx.GetUint("userid")
+	userID := ctx.GetUint("userid")
 	orderID := ctx.Param("ID")
 	convID, _ := strconv.ParseUint(orderID, 10, 32)
 
-	if err := initializers.DB.Preload("Order").Preload("Product").Preload("Product.Category").Preload("Order.Address").Preload("Order.User").Joins("JOIN orders ON orders.id = order_items.order_id").Where("orders.user_id=? AND order_id=?", userid, uint(convID)).Find(&orders).Error; err != nil {
+	if err := initializers.DB.Preload("Order").Preload("Product").Preload("Product.Category").Preload("Order.Address").Preload("Order.User").Joins("JOIN orders ON orders.id = order_items.order_id").Where("orders.user_id=? AND order_id=?", userID, uint(convID)).Find(&orders).Error; err != nil {
 		ctx.JSON(500, gin.H{
 			"error": "Failed to Fetch Items",
 		})
@@ -91,10 +87,7 @@ func OrderDetails(ctx *gin.Context) {
 	}
 
 	var List []showOrders
-	offer := 0.0
-	couponOffer := 0
-	grandTotal := 0
-	cancelAmount := 0
+	offer, couponOffer, grandTotal, cancelAmount := 0.0, 0, 0, 0
 
 	for _, v := range orders {
 		var coupon models.Coupons

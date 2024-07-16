@@ -15,7 +15,7 @@ type newcoupon struct {
 	Code        string  `json:"code"`
 	Discount    float64 `json:"discount"`
 	Condition   int     `json:"condition"`
-	Description string  `json:"descrition"`
+	Description string  `json:"description"`
 	MaxUsage    int     `json:"maxUsage"`
 	Start_Date  string  `json:"startDate"`
 	Expiry_Date string  `json:"expiryDate"`

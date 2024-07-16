@@ -17,73 +17,74 @@ import (
 	"github.com/razorpay/razorpay-go"
 )
 
-func PaymentSubmission(orderid string, amount int) (string, error) {
-	fmt.Println("paymentorderID---------------------->", orderid, "paymentamount-------------->", amount)
-	keyid := os.Getenv("RAZORPAY_ID")
+func PaymentSubmission(orderID string, amount int) (string, error) {
+	fmt.Println("paymentorderID:", orderID, "\npaymentamount:", amount)
+	keyID := os.Getenv("RAZORPAY_ID")
 	secretkey := os.Getenv("RAZORPAY_SECRET")
-	fmt.Println("keyid--------->", keyid, "secretkey------------------->", secretkey)
-	Client := razorpay.NewClient(keyid, secretkey)
+	fmt.Println("keyid:", keyID, "\nsecretkey:", secretkey)
+	Client := razorpay.NewClient(keyID, secretkey)
 
 	paymentDetails := map[string]interface{}{
 		"amount":   amount * 100,
 		"currency": "INR",
-		"receipt":  orderid,
+		"receipt":  orderID,
 	}
 	order, err := Client.Order.Create(paymentDetails, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create order: %w", err)
 	}
-	razorOrderID, _ := order["id"].(string)
-	fmt.Println("razororderid---------------->", razorOrderID)
+	razorOrderID, ok := order["id"].(string)
+	fmt.Println("razororderid:", razorOrderID)
+	if !ok {
+		return "", errors.New("failed to retrieve order ID from Razorpay response")
+	}
 	return razorOrderID, nil
 }
 
 func RazorPaymentVerification(sign, orderId, paymentId string) error {
 	secretKey := os.Getenv("RAZORPAY_SECRET")
-	//signature := sign
+	signature := sign
 	secret := secretKey
 	data := orderId + "|" + paymentId
 	h := hmac.New(sha256.New, []byte(secret))
-	_, err := h.Write([]byte(data))
-	if err != nil {
-		panic(err)
+	if _, err := h.Write([]byte(data)); err != nil {
+		return fmt.Errorf("failed to write HMAC: %w", err)
 	}
-	sha := hex.EncodeToString(h.Sum(nil))
-	if subtle.ConstantTimeCompare([]byte(sha), []byte(sign)) != 1 {
-		return errors.New("PAYMENT FAILED")
-	} else {
-		return nil
+
+	expectedSignature := hex.EncodeToString(h.Sum(nil))
+	if subtle.ConstantTimeCompare([]byte(expectedSignature), []byte(signature)) != 1 {
+		return errors.New("payment verification failed")
 	}
+	return nil
+
 }
 
 func CreatePayment(ctx *gin.Context) {
-	fmt.Println("-------------------------its in payment-----------------------")
-	var Paymentdetails = make(map[string]string)
+	fmt.Println("-------------------------payment processing-----------------------")
+	var PaymentDetails = make(map[string]string)
 	var Payment models.Payment
-	if err := ctx.ShouldBindJSON(&Paymentdetails); err != nil {
+	if err := ctx.ShouldBindJSON(&PaymentDetails); err != nil {
 		utils.HandleError(ctx, http.StatusInternalServerError, "Invalid request")
+		return
 	}
-	fmt.Println("====>", Paymentdetails)
-	err := RazorPaymentVerification(Paymentdetails["signatureID"], Paymentdetails["order_Id"], Paymentdetails["paymentID"])
+	fmt.Printf("Received Payment Details: %+v\n", PaymentDetails)
+	err := RazorPaymentVerification(PaymentDetails["signatureID"], PaymentDetails["order_Id"], PaymentDetails["paymentID"])
 	if err != nil {
 		fmt.Println("====>", err)
 		return
 	}
 
-	fmt.Println("======", Paymentdetails["order_Id"])
-	if err := initializers.DB.Where("ord_id = ?", Paymentdetails["order_Id"]).First(&Payment); err.Error != nil {
+	fmt.Println("======", PaymentDetails["order_Id"])
+	if err := initializers.DB.Where("ord_id = ?", PaymentDetails["order_Id"]).First(&Payment); err.Error != nil {
 		utils.HandleError(ctx, http.StatusNotFound, "OrderID not found")
 		return
 	}
-	fmt.Println("-------", Payment)
-	Payment.PaymentID = Paymentdetails["paymentID"]
+
+	Payment.PaymentID = PaymentDetails["paymentID"]
 	Payment.PaymentStatus = "Done"
-	if err := initializers.DB.Model(&Payment).Updates(&models.Payment{
-		PaymentID:     Payment.PaymentID,
-		PaymentStatus: Payment.PaymentStatus,
-	}); err.Error != nil {
-		utils.HandleError(ctx, http.StatusNotFound, "failed to update payment ID")
-	} else {
-		ctx.JSON(200, gin.H{"Message": "Payment Done"})
+	if err := initializers.DB.Save(&Payment).Error; err != nil {
+		utils.HandleError(ctx, http.StatusInternalServerError, "Failed to update payment status")
+		return
 	}
+	ctx.JSON(200, gin.H{"Message": "Payment Done"})
 }

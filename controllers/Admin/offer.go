@@ -84,12 +84,13 @@ func OfferCalc(productID uint) float64 {
 	if err := initializers.DB.Joins("Offer").First(&offerCheck, "products.id = ?", productID); err.Error != nil {
 		return Discount
 	}
-	percentage := offerCheck.Offer.Discount
-	fmt.Println("%:  ", percentage)
+	discountPercentage := offerCheck.Offer.Discount
 	ProductAmount := offerCheck.Price
-	fmt.Println("product amount: ", ProductAmount)
-	Discount = (percentage * float64(ProductAmount)) / 100
-	fmt.Println("discount: ", Discount)
+	Discount = (discountPercentage * float64(ProductAmount)) / 100
+
+	fmt.Println("Discount percentage:", discountPercentage)
+	fmt.Println("Product amount:", ProductAmount)
+	fmt.Println("Discount:", Discount)
 
 	return Discount
 }
