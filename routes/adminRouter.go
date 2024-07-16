@@ -50,7 +50,7 @@ func AdminGroup(r *gin.RouterGroup) {
 	r.POST("/admin/offerapply/:ID", middleware.AuthMiddleware(RoleAdmin), controllers.OfferApply)
 
 	//Sales Report
-	r.POST("sales", middleware.AuthMiddleware(RoleAdmin), controllers.SalesReport)
+	r.POST("/sales", middleware.AuthMiddleware(RoleAdmin), controllers.SalesReport)
 
 	//chart
 	r.GET("/orderanalyse", controllers.GetFilteredOrders)
